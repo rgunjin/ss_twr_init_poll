@@ -156,6 +156,10 @@
 // PMSC_CTRL1 bits
 #define DW_PMSC_CTRL1_LDERUN    (1UL << 9)  // Enable LDE algorithm — must be set
                                              // for accurate RX timestamps
+// PMSC_CTRL0 soft reset values (written to byte 3, sub-address 0x03)
+#define DW_PMSC_CTRL0_RESET_ALL     0x00    // Reset all
+#define DW_PMSC_CTRL0_RESET_RX      0xE0    // Reset RX only
+#define DW_PMSC_CTRL0_RESET_CLEAR   0xF0    // Clear reset
 
 // =============================================================================
 // SYS_STATUS register bits (0x0F)
