@@ -2,7 +2,6 @@
 #include "dw1000_regs.h"
 #include "spi.h"
 #include <stdint.h>
-#include "SEGGER_RTT.h"
 
 // =============================================================================
 // Internal: build SPI header bytes for DW1000 transaction
@@ -385,3 +384,11 @@ uint32_t dw1000_read_rx_finfo(void) {
 void dw1000_trxoff(void) {
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
 }
+
+void dw1000_rx_reset(void) {
+    uint8_t reset = DW_PMSC_CTRL0_RESET_RX;
+    uint8_t clear = DW_PMSC_CTRL0_RESET_CLEAR;
+    dw1000_write_subreg(DW_REG_PMSC, 0x03, &reset, 1);
+    dw1000_write_subreg(DW_REG_PMSC, 0x03, &clear, 1);
+}
+

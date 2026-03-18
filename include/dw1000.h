@@ -83,4 +83,8 @@ uint32_t dw1000_read_rx_finfo(void);
 // Force transceiver off. Call before re-enabling RX after an error
 void dw1000_trxoff(void);
 
+// Reset RX block — call after RX error to reinitialise LDE operation.
+// Mirrors dwt_rxreset() from Decawave driver.
+void dw1000_rx_reset(void);
+
 #endif // DW1000_H
