@@ -175,11 +175,11 @@
 #define SYS_STATUS_RXPHD        (1UL << 11) // RX PHR detected
 #define SYS_STATUS_RXPHE        (1UL << 12) // RX PHR error
 #define SYS_STATUS_RXDFR        (1UL << 13) // RX data frame ready
-#define SYS_STATUS_RXFCG        (1UL << 13) // RX FCS good (same bit as RXDFR)
-#define SYS_STATUS_RXFCE        (1UL << 14) // RX FCS error
-#define SYS_STATUS_RXRFSL       (1UL << 15) // RX Reed Solomon sync loss
-#define SYS_STATUS_RXRFTO       (1UL << 16) // RX frame wait timeout
-#define SYS_STATUS_LDEERR       (1UL << 17) // LDE error
+#define SYS_STATUS_RXFCG        (1UL << 14) // RX FCS good
+#define SYS_STATUS_RXFCE        (1UL << 15) // RX FCS error
+#define SYS_STATUS_RXRFSL       (1UL << 16) // RX Reed Solomon sync loss
+#define SYS_STATUS_RXRFTO       (1UL << 17) // RX frame wait timeout
+#define SYS_STATUS_LDEERR       (1UL << 18) // LDE error
 #define SYS_STATUS_RXOVRR       (1UL << 20) // RX buffer overrun
 #define SYS_STATUS_RXPTO        (1UL << 21) // Preamble detect timeout
 #define SYS_STATUS_GPIOIRQ      (1UL << 22) // GPIO interrupt
@@ -192,7 +192,7 @@
 #define SYS_STATUS_AFFREJ       (1UL << 29) // Auto frame filter rejection
 
 // Composite masks
-#define SYS_STATUS_ALL_RX_GOOD  (SYS_STATUS_RXDFR | SYS_STATUS_LDEDONE)
+#define SYS_STATUS_ALL_RX_GOOD  (SYS_STATUS_RXDFR | SYS_STATUS_RXFCG)
 #define SYS_STATUS_ALL_RX_ERR   (SYS_STATUS_RXPHE | SYS_STATUS_RXFCE  | \
                                  SYS_STATUS_RXRFSL | SYS_STATUS_RXSFDTO | \
                                  SYS_STATUS_LDEERR | SYS_STATUS_RXRFTO)
