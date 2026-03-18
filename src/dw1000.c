@@ -392,3 +392,9 @@ void dw1000_rx_reset(void) {
     dw1000_write_subreg(DW_REG_PMSC, 0x03, &clear, 1);
 }
 
+void dw1000_set_antenna_delay(uint16_t tx_delay, uint16_t rx_delay) {
+    // TX_ANTD (0x18) - 16-bit TX antenna delay
+    dw1000_write_subreg(DW_REG_TX_ANTD, 0x00, (uint8_t *)&tx_delay, 2);
+    // LDE_RXANTD - RX antenna delay lives in LDE_CTRL
+    dw1000_write_subreg(DW_REG_LDE_CTRL, 0x1804, (uint8_t *)&rx_delay, 2);
+}
