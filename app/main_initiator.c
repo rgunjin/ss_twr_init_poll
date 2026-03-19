@@ -67,7 +67,7 @@ static void led_on(uint8_t pin)  { NRF_GPIO->OUTCLR = (1 << pin); }
 static void led_off(uint8_t pin) { NRF_GPIO->OUTSET = (1 << pin); }
 
 // Extract 4-byte little-endian timestamp from message buffer
-static uint32_t msg_ge_ts(uint8_t *buf) {
+static uint32_t msg_get_ts(uint8_t *buf) {
     return (uint32_t)buf[0]          |
            ((uint32_t)buf[1] << 8)   |
            ((uint32_t)buf[2] << 16)  |
@@ -132,17 +132,33 @@ int main(void) {
 
             // 4. Validate frame - clear sequence  number before compare
             rx_buffer[ALL_MSG_SN_IDX] = 0;
-            if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) {
+            if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN)) {
                     // 5. Read loacal timestamps
                     uint32_t poll_tx_ts = dw1000_read_tx_timestamp(); // T1
                     uint32_t resp_rx_ts = dw1000_read_rx_timestamp(); // T4
 
                     // 6. Extract remote timestamps for response payload
                     uint32_t poll_rx_ts = msg_get_ts(&rx_buffer[RESP_MSG_POLL_RX_TS_IDX]); // T2
-                    uint32_t resp_tx_tx = msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX]); // T3
+                    uint32_t resp_tx_ts = msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX]); // T3
 
                     // 7. Compute time of flight and distance
                     uint32_t rtd_init = (uint32_t)(resp_rx_ts - poll_tx_ts);
                     uint32_t rtd_resp = (uint32_t)(resp_tx_ts - poll_rx_ts);
                     double tof = ((rtd_init - rtd_resp) / 2.0) * DWT_TIME_UNITS;
                     double distance = tof * SPEED_OF_LIGHT;
+
+                    // SEGGER_RTT_printf does not support %f - print as cm integer
+                    SEGGER_RTT_printf(0, "dist: %d cm\n", (int)(distance * 100));
+                    led_on(30);
+                    delay(10000);
+                    led_off(30);
+            }
+        } else {
+            // RX error - clear flags and reset receiver
+            dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
+            dw1000_rx_reset();
+        }
+
+        delay(1000000);     // pause between ranging  exchanges
+    }
+}
