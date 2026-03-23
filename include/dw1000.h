@@ -89,6 +89,6 @@ void dw1000_rx_reset(void);
 
 // Set TX and RX antenna delay (in DW1000 time units, ~15.65ps each)
 // Default value from Decawave for DWM1001: 16456
-void dw1000_antenna_delay(uint16_t tx_delay, uint16_t rx_delay);
+void dw1000_set_antenna_delay(uint16_t tx_delay, uint16_t rx_delay);
 
 #endif // DW1000_H 

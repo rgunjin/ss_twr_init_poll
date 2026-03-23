@@ -53,7 +53,7 @@ static uint8_t frame_seq_nb = 0;
 // =============================================================================
 
 static void delay(volatile uint32_t count) {
-    whiel (count--) {}
+    while (count--) {}
 }
 
 static void led_init(void) {
@@ -105,7 +105,7 @@ int main(void) {
     // =========================================================================
     // Responder loop
     // =========================================================================
-    whiel (1) {
+    while (1) {
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
 

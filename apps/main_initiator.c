@@ -99,7 +99,7 @@ int main(void) {
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
-    dw1000_antenna_delay(ANT_DLY, ANT_DLY);
+    dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
     SEGGER_RTT_printf(0, "[INIT] OK - starting ranging\n");
     led_off(30);
