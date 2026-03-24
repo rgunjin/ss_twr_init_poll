@@ -52,9 +52,13 @@ void dw1000_write_tx_data(uint8_t *data, uint8_t len, uint8_t offset);
 void dw1000_write_tx_fctrl(uint8_t len, uint8_t offset, uint8_t ranging);
 
 // Start transmission
-// wait4resp — 1: automatically enable RX after TX (initiator role)
-//             0: TX only, no auto-RX (responder sending final reply)
-void dw1000_start_tx(uint8_t wait4resp);
+// mode is a bitmask of DW_TX_* flags:
+//   DW_TX_IMMEDIATE  — send now (default, can be omitted)
+//   DW_TX_DELAYED    — send at time set by dw1000_set_delayed_tx_time()
+//   DW_TX_WAIT4RESP  — auto-enable RX after TX (use on initiator)
+// Example: dw1000_start_tx(DW_TX_DELAYED) — delayed TX, no auto-RX
+//          dw1000_start_tx(DW_TX_WAIT4RESP) — immediate TX, auto-RX after
+void dw1000_start_tx(uint8_t mode);
 
 // Enable receiver manually (use when not relying on wait4resp)
 void dw1000_rx_enable(void);

@@ -329,12 +329,16 @@ void dw1000_write_tx_fctrl(uint8_t len, uint8_t offset, uint8_t ranging) {
     dw1000_write_reg(DW_REG_TX_FCTRL, buf, 5);
 }
 
-void dw1000_start_tx(uint8_t wait4resp) {
-    uint32_t ctrl = SYS_CTRL_TXSTRT;
-    if (wait4resp) {
+void dw1000_start_tx(uint8_t mode) {
+    uint8_t ctrl = 0;
+    if (mode & DW_TX_DELAYED) {
+        ctrl |= SYS_CTRL_TXDLYS;
+    }
+    if (mode & DW_TX_WAIT4ESP) {
         ctrl |= SYS_CTRL_WAIT4RESP;
     }
-    dw1000_write32(DW_REG_SYS_CTRL, ctrl);
+    ctrl |= SYS_CTRL_TXSTRT;
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
 }
 
 void dw1000_rx_enable(void) {
