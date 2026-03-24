@@ -1,4 +1,5 @@
 #include "dw1000.h"
+#include "SEGGER_RTT.h"
 #include "dw1000_regs.h"
 #include "spi.h"
 #include <stdint.h>
@@ -342,6 +343,9 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
+    dw_delay(10000);
+    uint32_t sys_status = dw1000_read_sys_status();
+    SEGGER_RTT_printf(0, "[RX] after delay: 0x%08X\n", sys_status);
     dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
 }
