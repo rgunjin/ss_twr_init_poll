@@ -110,6 +110,10 @@ int main(void) {
         dw1000_rx_enable();
         SEGGER_RTT_printf(0, "[RX] listening...\n");
 
+        uint32_t sys_ctrl = dw1000_read32(DW_REG_SYS_CFG);
+        uint32_t sys_status = dw1000_read_sys_status();
+        SEGGER_RTT_printf(0, "[RX] SYS_CTRL=0x%08X SYS_STATUS=0x%08X\n", sys_ctrl, sys_status);
+
         uint32_t status;
         uint32_t timeout = 0;
         while (!((status = dw1000_read_sys_status()) &
