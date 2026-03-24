@@ -111,8 +111,15 @@ int main(void) {
         SEGGER_RTT_printf(0, "[RX] listening...\n");
 
         uint32_t status;
+        uint32_t timeout = 0;
         while (!((status = dw1000_read_sys_status()) &
-                    (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
+                    (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {
+            timeout++;
+            if (timeout > 100000) {
+                SEGGER_RTT_printf(0, "[RX] timeout, status=0x%08X\n", status);
+                break;
+            }
+        }
 
         
         SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);

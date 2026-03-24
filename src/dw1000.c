@@ -342,6 +342,7 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
+    dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
 }
 
