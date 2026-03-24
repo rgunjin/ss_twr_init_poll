@@ -71,6 +71,11 @@ void dw1000_read_rx_data(uint8_t *buf, uint8_t len);
 // any ranging exchange
 uint32_t dw1000_read_tx_timestamp(void);
 
+// Read lower 32 bits of RX timestamp.
+// Sufficient for initiator side — 32-bit range covers ~67ms,
+// far longer than any ranging exchange
+uint32_t dw1000_read_rx_timestamp(void);
+
 // Read full 40-bit RX timestamp as 64-bit value
 // Required for SS-TWR delayed TX calculator on responder side
 uint64_t dw1000_read_rx_timestamp_u64(void);
