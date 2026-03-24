@@ -108,10 +108,14 @@ int main(void) {
     while (1) {
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
+        SEGGER_RTT_printf(0, "[RX] listening...\n");
 
         uint32_t status;
         while (!((status = dw1000_read_sys_status()) &
                     (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
+
+        
+        SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
 
         if (status & SYS_STATUS_RXFCG) {
             // 2. Read recieved frame

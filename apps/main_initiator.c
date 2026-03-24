@@ -114,12 +114,14 @@ int main(void) {
         dw1000_write_tx_data(tx_poll_msg, sizeof(tx_poll_msg), 0);
         dw1000_write_tx_fctrl(sizeof(tx_poll_msg), 0, 1);
         dw1000_start_tx(1);     // wait4resp = 1; auto-enable RX after TX
+        SEGGER_RTT_printf(0, "[TX] poll sent #%d\n", frame_seq_nb);
 
         // 2. Poll SYS_STATUS until RX done or error
         uint32_t status;
         while (!((status = dw1000_read_sys_status()) &
                         (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
 
+        SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
         frame_seq_nb++;
 
         if (status & SYS_STATUS_RXFCG) {
