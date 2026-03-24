@@ -215,6 +215,11 @@
 #define SYS_CTRL_RXENAB         (1UL << 8)  // Enable RX now
 #define SYS_CTRL_RXDLYE         (1UL << 9)  // Enable delayed RX
 
+// TX mode flags - passed to dw1000_start_tx()
+#define DW_TX_IMMEDIATE         0x00        // send immediately
+#define DW_TX_DELAYED           0x01        // send at time set by dw1000_set_delayed_tx_time()
+#define DW_TX_WAIT4ESP          0x02        // auto-enable RX after TX (initiator role)
+
 // =============================================================================
 // TX_FCTRL register bits (0x08)
 // =============================================================================

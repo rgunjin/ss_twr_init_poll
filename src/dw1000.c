@@ -368,6 +368,17 @@ uint32_t dw1000_read_rx_timestamp(void) {
            ((uint32_t)buf[3] << 24);
 }
 
+uint64_t dw1000_read_rx_timestamp_u64(void) {
+    uint8_t buf[5];
+    dw1000_read_subreg(DW_REG_RX_TIME, 0, buf, 5);
+    return (uint64_t)buf[0]         |
+           ((uint64_t)buf[1] << 8)  |
+           ((uint64_t)buf[2] << 16) |
+           ((uint64_t)buf[3] << 24) |
+           ((uint64_t)buf[4] << 32);
+}
+
+
 uint32_t dw1000_read_sys_status(void) {
     return dw1000_read32(DW_REG_SYS_STATUS);
 }

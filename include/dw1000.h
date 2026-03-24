@@ -67,8 +67,9 @@ void dw1000_read_rx_data(uint8_t *buf, uint8_t len);
 // any ranging exchange
 uint32_t dw1000_read_tx_timestamp(void);
 
-// Read lower 32 bits of RX timestamp
-uint32_t dw1000_read_rx_timestamp(void);
+// Read full 40-bit RX timestamp as 64-bit value
+// Required for SS-TWR delayed TX calculator on responder side
+uint64_t dw1000_read_rx_timestamp_u64(void);
 
 // Read full SYS_STATUS register
 uint32_t dw1000_read_sys_status(void);
@@ -90,5 +91,9 @@ void dw1000_rx_reset(void);
 // Set TX and RX antenna delay (in DW1000 time units, ~15.65ps each)
 // Default value from Decawave for DWM1001: 16456
 void dw1000_set_antenna_delay(uint16_t tx_delay, uint16_t rx_delay);
+
+// Schedule delayed TX by writing to DX_TIME register (0x0A).
+// tx_time must be pre-shifted right by 8 (hardware ignores bits [8:0])
+void dw1000_set_delayed_tx_time(uint32_t tx_time);
 
 #endif // DW1000_H 
