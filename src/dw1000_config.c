@@ -58,6 +58,11 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     uint8_t sys_ctrl = SYS_CTRL_TXSTRT | SYS_CTRL_TRXOFF;
     dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &sys_ctrl, 1);
 
+    // Disable double RX buffer - siplifies buffer managment
+    uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CTRL);
+    sys_cfg |= SYS_CFG_DIS_DRXB;
+    dw1000_write32(DW_REG_SYS_CTRL, sys_cfg);
+
     // --- Frequency synthesiser (PLL) ---
     uint32_t pllcfg  = CFG_FS_PLLCFG;
     uint8_t  plltune = CFG_FS_PLLTUNE;
