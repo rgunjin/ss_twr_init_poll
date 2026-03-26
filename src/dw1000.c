@@ -343,9 +343,12 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
-    dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
-    uint16_t ctrl = (uint16_t)SYS_CTRL_RXENAB;      // 0x1000
+    uint16_t ctrl = (uint16_t)SYS_CTRL_RXENAB;      // 0x0100
     dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, (uint8_t *)&ctrl, 2);
+    for (int i = 0; i < 10; i++) {
+    volatile int d; for (d = 0; d < 1000; d++) {}
+    SEGGER_RTT_printf(0, "[RX] poll %d: 0x%08X\n", i, dw1000_read_sys_status());
+}
 }
 
 void dw1000_read_rx_data(uint8_t *buf, uint8_t len) {
