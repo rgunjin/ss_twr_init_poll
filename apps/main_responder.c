@@ -116,6 +116,10 @@ int main(void) {
         while (!((status = dw1000_read_sys_status()) &
                     (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
 
+        led_on(31);
+        delay(1000);
+        led_off(31);
+
         if (status & SYS_STATUS_RXFCG) {
             // 2. Read recieved frame
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
