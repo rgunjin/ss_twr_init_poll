@@ -95,6 +95,8 @@ int main(void) {
         while (1) {}
     }
 
+    spi_init(SPIM_FREQ_8M);
+
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
