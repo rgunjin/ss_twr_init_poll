@@ -343,11 +343,9 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
-    dw_delay(10000);
-    uint32_t sys_status = dw1000_read_sys_status();
-    SEGGER_RTT_printf(0, "[RX] after delay: 0x%08X\n", sys_status);
     dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
-    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+    uint16_t ctrl = (uint16_t)SYS_CTRL_RXENAB;      // 0x1000
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, (uint8_t *)&ctrl, 2);
 }
 
 void dw1000_read_rx_data(uint8_t *buf, uint8_t len) {
