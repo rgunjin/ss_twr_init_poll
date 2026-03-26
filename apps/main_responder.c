@@ -99,6 +99,7 @@ int main(void) {
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
+    SEGGER_RTT_printf(0, "[INIT] SYS_CFG=0x%08X\n", dw1000_read32(DW_REG_SYS_CFG));
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
     SEGGER_RTT_printf(0, "[INIT] OK - waiting for poll\n");
