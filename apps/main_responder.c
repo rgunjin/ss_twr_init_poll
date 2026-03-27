@@ -99,6 +99,15 @@ int main(void) {
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
+
+    uint8_t pllbuf[4];
+    dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLCFG, pllbuf, 4);
+    uint32_t pllcfg = (uint32_t)pllbuf[0] | ((uint32_t)pllbuf[1]<<8) |
+                  ((uint32_t)pllbuf[2]<<16) | ((uint32_t)pllbuf[3]<<24);
+    uint8_t plltune = 0;
+    dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLTUNE, &plltune, 1);
+    SEGGER_RTT_printf(0, "[CFG] FS_PLLCFG=0x%08X FS_PLLTUNE=0x%02X\n", pllcfg, plltune);
+
     SEGGER_RTT_printf(0, "[INIT] SYS_CFG=0x%08X\n", dw1000_read32(DW_REG_SYS_CFG));
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
@@ -111,13 +120,12 @@ int main(void) {
     while (1) {
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
-
-        uint32_t status = dw1000_read_sys_status();
-        SEGGER_RTT_printf(0, "status=0x%08X\n", status);
-
+        // Читаем SYS_STATE чтобы увидеть в каком состоянии чип
+        uint32_t sys_state = dw1000_read32(DW_REG_SYS_STATE);
+        SEGGER_RTT_printf(0, "state=0x%08X status=0x%08X\n", 
+                          sys_state, dw1000_read_sys_status());
         delay(500000);
     }
-
 }
 
 // NOTE: In this simple implementation T3 is sent as 0 in the response.
