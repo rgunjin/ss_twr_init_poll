@@ -121,9 +121,7 @@ int main(void) {
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
         // Читаем SYS_STATE чтобы увидеть в каком состоянии чип
-        uint32_t sys_state = dw1000_read32(DW_REG_SYS_STATE);
-        SEGGER_RTT_printf(0, "state=0x%08X status=0x%08X\n", 
-                          sys_state, dw1000_read_sys_status());
+        SEGGER_RTT_printf(0, "status=0x%08X\n", dw1000_read_sys_status());
         delay(500000);
     }
 }
