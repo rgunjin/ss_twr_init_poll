@@ -112,61 +112,12 @@ int main(void) {
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
 
-        uint32_t status;
-        while (!((status = dw1000_read_sys_status()) &
-                    (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
+        uint32_t status = dw1000_read_sys_status();
+        SEGGER_RTT_printf(0, "status=0x%08X\n", status);
 
-        led_on(31);
-        delay(1000);
-        led_off(31);
-
-        if (status & SYS_STATUS_RXFCG) {
-            // 2. Read recieved frame
-            dw1000_clear_sys_status(SYS_STATUS_RXFCG);
-            uint32_t frame_len = dw1000_read_rx_finfo() & 0x7F;
-            if (frame_len <= RX_BUF_LEN) {
-                dw1000_read_rx_data(rx_buffer, frame_len);
-            }
-
-            // 3. Validate frame - clear sequence number before compare
-            rx_buffer[ALL_MSG_SN_IDX] = 0;
-            if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0) {
-                // 4. Record T2: poll RX timestamp
-                uint32_t poll_rx_ts = dw1000_read_rx_timestamp();   // T2
-
-                // 5. Fill responce: embed T2 and placeholder for T3
-                tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
-                msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
-                msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], 0);   // T3 unknown
-
-                // 6. Send responde
-                dw1000_clear_sys_status(SYS_STATUS_TXFRS);
-                dw1000_write_tx_data(tx_resp_msg, sizeof(tx_resp_msg), 0);
-                dw1000_write_tx_fctrl(sizeof(tx_resp_msg), 0, 1);
-                dw1000_start_tx(0);     // NO wait4resp - TX only
-
-                // 7. Wait for TX done
-                while (!(dw1000_read_sys_status() & SYS_STATUS_TXFRS)) {}
-
-                // 8. Record T3: response TX timestamp
-                // NOTE: T3 is sent as 0 in this simple version.
-                // For accurate ranging, T3 must be sent in follow-up frame
-                // or computed from a know TX delay. See NOTE below
-                uint32_t resp_tx_ts = dw1000_read_tx_timestamp();   // T3
-                (void)resp_tx_ts;
-
-                frame_seq_nb++;
-                SEGGER_RTT_printf(0, "[RESP] sent response #%d\n", frame_seq_nb);
-                led_on(31);
-                delay(10000);
-                led_off(31);
-            }
-        } else {
-            // RX error - clear flags and reset receiver
-            dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
-            dw1000_rx_reset();
-        }
+        delay(500000);
     }
+
 }
 
 // NOTE: In this simple implementation T3 is sent as 0 in the response.
