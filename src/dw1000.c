@@ -343,13 +343,8 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
-    // Force TRXOFF first to ensure chip is in IDLE state
-    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
-    // Clear SLP2INIT if set
-    dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
-    // Enable RX
-    uint16_t ctrl = (uint16_t)SYS_CTRL_RXENAB;      // 0x0100
-    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, (uint8_t *)&ctrl, 2);
+    uint8_t ctrl = 0x01;  // RXENAB = бит 8 = второй байт = 0x01
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x01, &ctrl, 1);
 }
 
 void dw1000_read_rx_data(uint8_t *buf, uint8_t len) {
