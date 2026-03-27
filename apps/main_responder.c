@@ -100,6 +100,13 @@ int main(void) {
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
 
+    uint8_t aon_cfg0 = 0xFF;
+    dw1000_read_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
+    uint8_t aon_wcfg[2];
+    dw1000_read_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, aon_wcfg, 2);
+    SEGGER_RTT_printf(0, "[AON] CFG0=0x%02X WCFG=0x%02X%02X\n",
+                  aon_cfg0, aon_wcfg[1], aon_wcfg[0]);
+
     uint8_t pllbuf[4];
     dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLCFG, pllbuf, 4);
     uint32_t pllcfg = (uint32_t)pllbuf[0] | ((uint32_t)pllbuf[1]<<8) |
