@@ -4,8 +4,7 @@
 #include "spi.h"
 #include <stdint.h>
 
-// =============================================================================
-// Internal: build SPI header bytes for DW1000 transaction
+// ============================================================================= Internal: build SPI header bytes for DW1000 transaction
 //
 // DW1000 datasheet section 2.2.1 — SPI transaction header format:
 //
@@ -202,8 +201,10 @@ static void dw1000_softreset(void) {
     uint8_t aon_cfg0 = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
 
-    // 4. AON array upload: write 0x00 then AON_CTRL_SAVE (0x02)
-    uint8_t aon_ctrl = 0x00;
+    // 4. Upload config to AON block (UPL_CFG), then AON array upload (SAVE)
+    uint8_t aon_ctrl = 0x04;        // UPL_CFG - load config register into AON
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+    aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
     aon_ctrl = 0x02;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
