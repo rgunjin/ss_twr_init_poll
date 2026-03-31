@@ -208,6 +208,9 @@ static void dw1000_softreset(void) {
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
     aon_ctrl = 0x02;                // SAVE - upload  AON array
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+    uint8_t aon_cfg0_check = 0xFF;
+    dw1000_read_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0_check, 1);
+    SEGGER_RTT_printf(0, "[RESET] AON_CFG0 after clear = 0x%02X\n", aon_cfg0_check);
 
     // 5. Reset ALL (PMSC_CTRL0 byte 3 = 0x00)
     uint8_t reset = 0x00;
