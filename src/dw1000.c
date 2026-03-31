@@ -206,7 +206,7 @@ static void dw1000_softreset(void) {
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
     aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x02;
+    aon_ctrl = 0x02;                // SAVE - upload  AON array
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
 
     // 5. Reset ALL (PMSC_CTRL0 byte 3 = 0x00)
