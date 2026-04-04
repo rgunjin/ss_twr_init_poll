@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - --target=arm-none-eabi
+    - -isystem/usr/lib/arm-none-eabi/include
+  Remove:
+    - -mfloat-abi=hard
+    - -mfpu=fpv4-sp-d16
+    - -ffreestanding
+    - --specs=nano.specs
