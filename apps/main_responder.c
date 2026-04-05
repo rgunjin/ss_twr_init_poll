@@ -125,6 +125,10 @@ int main(void) {
     // Responder loop
     // =========================================================================
     while (1) {
+        dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
+        delay(1000);
+        dw1000_clear_sys_status(0xFFFFFFFF);    // Clear all flags
+
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
         // Читаем SYS_STATE чтобы увидеть в каком состоянии чип
