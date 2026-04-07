@@ -128,8 +128,24 @@ int main(void) {
             }
         } while (!(status & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR)));
 
-        SEGGER_RTT_printf(0, "status=0x%08X\n", dw1000_read_sys_status());
-        delay(500000);
+        if (status & SYS_STATUS_RXFCG) {
+            // Читаем фрейм и отвечаем
+            dw1000_clear_sys_status(SYS_STATUS_RXFCG);
+            uint32_t frame_len = dw1000_read_rx_finfo() & 0x7F;
+            if (frame_len <= RX_BUF_LEN) {
+                dw1000_read_rx_data(rx_buffer, frame_len);
+            }
+            rx_buffer[ALL_MSG_SN_IDX] = 0;
+            if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0) {
+                SEGGER_RTT_printf(0, "[RESP] got poll!\n");
+                // отправить respons
+            }
+        } else {
+            // ошибка
+            SEGGER_RTT_printf(0, "[ERR] status=0x%08X\n", status);
+            dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
+            dw1000_rx_reset();
+        }
     }
 }
 
