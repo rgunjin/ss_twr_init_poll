@@ -118,9 +118,16 @@ int main(void) {
     // Responder loop
     // =========================================================================
     while (1) {
-        // 1. Enable RX and wait for poll
-        dw1000_rx_enable();
-        // Читаем SYS_STATE чтобы увидеть в каком состоянии чип
+        // Clear SLP2INIT and re-enable RX if needed
+        uint32_t status;
+        do {
+            status = dw1000_read_sys_status();
+            if (status & SYS_STATUS_SLP2INIT) {
+                dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
+                dw1000_rx_enable();
+            }
+        } while (!(status & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR)));
+
         SEGGER_RTT_printf(0, "status=0x%08X\n", dw1000_read_sys_status());
         delay(500000);
     }
