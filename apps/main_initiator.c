@@ -85,9 +85,9 @@ int main(void) {
     // Hardware reset DW1000 via RST pin (P0.24)
     NRF_GPIO->DIRSET = (1UL << 24);
     NRF_GPIO->OUTCLR = (1UL << 24);
-    delay(10000);
+    delay(10000);                       // ~1ms low
     NRF_GPIO->DIRCLR = (1UL << 24);     // release RST (hi-z, open drain)
-    delay(500000);
+    delay(5000000);                     // ~80ms - let XTAL stabilize
 
     spi_init(SPIM_FREQ_2M);
 

@@ -4,7 +4,8 @@
 #include "spi.h"
 #include <stdint.h>
 
-// ============================================================================= Internal: build SPI header bytes for DW1000 transaction
+// =============================================================================
+// Internal: build SPI header bytes for DW1000 transaction
 //
 // DW1000 datasheet section 2.2.1 — SPI transaction header format:
 //
@@ -201,16 +202,11 @@ static void dw1000_softreset(void) {
     uint8_t aon_cfg0 = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
 
-    // 4. Upload config to AON block (UPL_CFG), then AON array upload (SAVE)
-    uint8_t aon_ctrl = 0x04;        // UPL_CFG - load config register into AON
+    // 4. AON array upload: write 0x00 then AON_CTRL_SAVE (0x02)
+    uint8_t aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x00;
+    aon_ctrl = 0x02;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x02;                // SAVE - upload  AON array
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    uint8_t aon_cfg0_check = 0xFF;
-    dw1000_read_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0_check, 1);
-    SEGGER_RTT_printf(0, "[RESET] AON_CFG0 after clear = 0x%02X\n", aon_cfg0_check);
 
     // 5. Reset ALL (PMSC_CTRL0 byte 3 = 0x00)
     uint8_t reset = 0x00;
@@ -226,6 +222,11 @@ static void dw1000_softreset(void) {
 
 
 int dw1000_init(void) {
+    // 0, Force Chip to INIT - it may be in SLP2INIT state after power-on
+    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
+    dw_delay(10000);
+    dw1000_clear_sys_status(0xFFFFFFFF);
+
     // 1. Verify DEV_ID before reset - fail fast is SPI broken
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {
         return DW_ERROR;
@@ -279,25 +280,10 @@ int dw1000_init(void) {
     uint8_t aon_cfg1 = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG1, &aon_cfg1, 1);
 
-    // 11b. Clear AON config and save to AON array
-    // LDE microcode load triggers AON download which restores old values.
-    // Clear again and save to AON array so next reset starts clean
-    uint8_t aon_cfg0 = 0x00;
-    uint16_t aon_wcfg = 0x0000;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
-    uint8_t aon_ctrl = 0x04;    // UPL_CFG - load registers into AON block
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x02;            // SAVE - save AON block to array
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-
     // 12. Final sanity check - verify chip still responds after init
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {
         return DW_ERROR;
     }
-
     return DW_SUCCESS;
 }
 

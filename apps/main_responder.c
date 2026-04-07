@@ -83,9 +83,9 @@ int main(void) {
     // Hardware reset DW1000 via RST pin (P0.24)
     NRF_GPIO->DIRSET = (1UL << 24);
     NRF_GPIO->OUTCLR = (1UL << 24);
-    delay(10000);
+    delay(10000);                           // ~1ms low
     NRF_GPIO->DIRCLR = (1UL << 24);         // release RST (hi-z, open drain)
-    delay(500000);
+    delay(5000000);                         // ~80ms - let XTAL stabilize
 
     spi_init(SPIM_FREQ_2M);
 
@@ -99,13 +99,6 @@ int main(void) {
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
-
-    uint8_t aon_cfg0 = 0xFF;
-    dw1000_read_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
-    uint8_t aon_wcfg[2];
-    dw1000_read_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, aon_wcfg, 2);
-    SEGGER_RTT_printf(0, "[AON] CFG0=0x%02X WCFG=0x%02X%02X\n",
-                  aon_cfg0, aon_wcfg[1], aon_wcfg[0]);
 
     uint8_t pllbuf[4];
     dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLCFG, pllbuf, 4);
@@ -125,10 +118,6 @@ int main(void) {
     // Responder loop
     // =========================================================================
     while (1) {
-        dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
-        delay(1000);
-        dw1000_clear_sys_status(0xFFFFFFFF);    // Clear all flags
-
         // 1. Enable RX and wait for poll
         dw1000_rx_enable();
         // Читаем SYS_STATE чтобы увидеть в каком состоянии чип
