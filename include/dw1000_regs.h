@@ -219,7 +219,7 @@
 // TX mode flags - passed to dw1000_start_tx()
 #define DW_TX_IMMEDIATE         0x00        // send immediately
 #define DW_TX_DELAYED           0x01        // send at time set by dw1000_set_delayed_tx_time()
-#define DW_TX_WAIT4ESP          0x02        // auto-enable RX after TX (initiator role)
+#define DW_TX_WAIT4RESP         0x02        // auto-enable RX after TX (initiator role)
 
 // =============================================================================
 // TX_FCTRL register bits (0x08)

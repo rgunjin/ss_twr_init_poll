@@ -339,7 +339,7 @@ void dw1000_start_tx(uint8_t mode) {
     if (mode & DW_TX_DELAYED) {
         ctrl |= SYS_CTRL_TXDLYS;
     }
-    if (mode & DW_TX_WAIT4ESP) {
+    if (mode & DW_TX_WAIT4RESP) {
         ctrl |= SYS_CTRL_WAIT4RESP;
     }
     ctrl |= SYS_CTRL_TXSTRT;
