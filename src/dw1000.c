@@ -419,3 +419,33 @@ void dw1000_set_antenna_delay(uint16_t tx_delay, uint16_t rx_delay) {
     // LDE_RXANTD - RX antenna delay lives in LDE_CTRL
     dw1000_write_subreg(DW_REG_LDE_CTRL, 0x1804, (uint8_t *)&rx_delay, 2);
 }
+
+void dw1000_set_delayed_tx_time(uint32_t tx_time) {
+    // DX_TIME (0x0A) - 5 байт, но аппаратно значим только биты [40:9],
+    // т.е. мы пишем уже сдвинутое значение в байты [1..4]
+    // Проще всего заипсать как 4-байтовое слово начиная с байта 1
+    uint8_t buf[4];
+    buf[0] = (uint8_t)(tx_time);
+    buf[1] = (uint8_t)(tx_time >> 8);
+    buf[2] = (uint8_t)(tx_time >> 16);
+    buf[3] = (uint8_t)(tx_time >> 24);
+    dw1000_write_subreg(DW_REG_DX_TIME, 0x01, buf, 4);
+}
+
+int dw1000_start_tx_delayed(void) {
+    // Выставляем TXDLYS + TXSTRT в SYS_CTRL
+    uint8_t ctrl = SYS_CTRL_TXDLYS | SYS_CTRL_TXSTRT;
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
+
+    // Проверяем HPDWARN - если выставлен, чип не успел подготовиться
+    // к запланированному времени TX. Передача не произошла
+    uint32_t status = dw1000_read_sys_status();
+    if (status & SYS_STATUS_HPDWARN) {
+        // Отменяем - принудительно выключаем трансивер
+        dw1000_trxoff();
+        dw1000_clear_sys_status(SYS_STATUS_HPDWARN);
+        return DW_ERROR;
+    }
+
+    return DW_SUCCESS;
+}

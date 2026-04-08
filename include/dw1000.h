@@ -105,4 +105,9 @@ void dw1000_set_antenna_delay(uint16_t tx_delay, uint16_t rx_delay);
 // tx_time must be pre-shifted right by 8 (hardware ignores bits [8:0])
 void dw1000_set_delayed_tx_time(uint32_t tx_time);
 
+// Start delayed transmission (TX at time set by dw1000_set_delay_tx_time)
+// Return DW_SUCCESS if transmission was scheduled in time,
+// DW_ERROR if HPDWARN is set (chip missed the deadline - tx was not sent)
+int dw1000_start_tx_delayed(void);
+
 #endif // DW1000_H 
