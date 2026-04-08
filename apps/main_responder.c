@@ -140,12 +140,18 @@ int main(void) {
                 SEGGER_RTT_printf(0, "[RESP] got poll\n");
 
                 // T2 - timestamp прием poll (40 бит, берем младшие 32)
-                uint32_t poll_rx_ts = dw1000_read_rx_timestamp();
+                uint64_t poll_rx_ts = dw1000_read_rx_timestamp_u64();
 
-                // запланировать TX через ~1100 мкс
-                // 1 uus = 65536 DTU
-                uint32_t resp_tx_time = (poll_rx_ts + (1100 * 65536)) >> 8;
+                // Вычисляем время отправки ответа
+                #define POLL_RX_TO_RESP_TX_DLY_UUS  1100
+                #define UUS_TO_DWT_TIME             65536
+
+                uint32_t resp_tx_time = (uint32_t)((poll_rx_ts +
+                                        (uint64_t)(POLL_RX_TO_RESP_TX_DLY_UUS *
+                                         UUS_TO_DWT_TIME)) >> 8);
                 dw1000_set_delayed_tx_time(resp_tx_time);
+
+
 
                 // T3 - заранее вычисленный TX timestamp
                 uint32_t resp_tx_ts = ((uint32_t)(resp_tx_time & 0xFFFFFFFE) << 8) + ANT_DLY;
@@ -154,12 +160,13 @@ int main(void) {
                 msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
                 msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
 
+                // Готовим фрейм
                 tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
                 dw1000_write_tx_data(tx_resp_msg, sizeof(tx_resp_msg), 0);
                 dw1000_write_tx_fctrl(sizeof(tx_resp_msg), 0, 1);
 
+                // Запускаем отложенную передачу
                 int ret = dw1000_start_tx_delayed();    // DWT_START_TX_DELAYED
-
                 if (ret == DW_SUCCESS) {
                     while (!(dw1000_read_sys_status() & SYS_STATUS_TXFRS)) {}
                     dw1000_clear_sys_status(SYS_STATUS_TXFRS);
