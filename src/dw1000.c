@@ -276,9 +276,44 @@ int dw1000_init(void) {
     // 10. Return clock to normal sequenced mode
     enableclocks_seq();
 
-    // 11. Clear AON_CFG1 - required for correct DEEPSLEEP operation
+    // 10a. Enable LDE algorithm - must be set after loading microcode
+    // Without this bit RX timestamp are garbage even if RX works
+    // PMSC_CTRL1 is at sub-address 0x04, 2 bytes
+    // LDERUN = bit 9 of the full 32-register = 9 bit of the 16-bit word
+    uint16_t pmsc_ctrl1 = 0;
+    dw1000_read_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&pmsc_ctrl1, 2);
+    pmsc_ctrl1 |= (1U << 9);        // LDERUN
+    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&pmsc_ctrl1, 2);
+
+    // 11. AON - запретить автоматический уход в sleep
+    // В этом примере sleep не используем, поэтому все занулили
+    // I) AON_WCFG = 0 - ничего не востанавливать при wake-up
+    uint16_t aon_wcfg = 0x0000;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
+
+    // II) AON_CFG0 = 0 - отключаем все триггеры засыпания
+    //      бит 0: SLEEP_EN - разрешить sleep (0 = запрещено)
+    //      бит 1: WAKE_PIN - wake по IRQ пину
+    //      бит 2: WAKE_SPI - wake по SPI CS
+    //      бит 3: WAKE_CNT - wake по таймеру
+    //      все в 0 = чип не спит никогда
+    uint8_t aon_cfg0 = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
+
+    // III) AON_CFG1 = 0 - доп. настройки sleep, тоже зануляем
     uint8_t aon_cfg1 = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG1, &aon_cfg1, 1);
+
+    // IV) Сохранить эту конфигурацию в AON массив
+    // Сначала пишем 0 (сброс команды), потом UPL_CFG (0x04)
+    // UPL_CFG = Upload config from register into AON array
+    uint8_t aon_ctrl = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+    aon_ctrl = 0x04;        // AON_CTRL_UPL_CFG
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+    // Сброс команды просле выполнения
+    aon_ctrl = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
 
     // 12. Final sanity check - verify chip still responds after init
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {

@@ -115,6 +115,7 @@ int main(void) {
     led_off(31);
 
     dw1000_rx_enable();
+    SEGGER_RTT_printf(0, "[RX] waiting...\n");
 
     // =========================================================================
     // Responder loop
@@ -126,6 +127,8 @@ int main(void) {
         // Ждем событие
         while (!(status = dw1000_read_sys_status() &
                 (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
+
+        SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
 
         if (status & SYS_STATUS_RXFCG) {
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
