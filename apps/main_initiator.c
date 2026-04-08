@@ -136,7 +136,7 @@ int main(void) {
 
             // 4. Validate frame - clear sequence  number before compare
             rx_buffer[ALL_MSG_SN_IDX] = 0;
-            if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN)) {
+            if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) == 0) {
                     // 5. Read loacal timestamps
                     uint32_t poll_tx_ts = dw1000_read_tx_timestamp(); // T1
                     uint32_t resp_rx_ts = dw1000_read_rx_timestamp(); // T4

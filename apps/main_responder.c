@@ -95,7 +95,7 @@ int main(void) {
         while (1) {}
     }
 
-    // spi_init(SPIM_FREQ_8M);
+    spi_init(SPIM_FREQ_8M);
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
@@ -114,38 +114,69 @@ int main(void) {
     SEGGER_RTT_printf(0, "[INIT] OK - waiting for poll\n");
     led_off(31);
 
+    dw1000_rx_enable();
+
     // =========================================================================
     // Responder loop
     // =========================================================================
     while (1) {
-        // Clear SLP2INIT and re-enable RX if needed
         uint32_t status;
-        do {
-            status = dw1000_read_sys_status();
-            if (status & SYS_STATUS_SLP2INIT) {
-                dw1000_clear_sys_status(SYS_STATUS_SLP2INIT);
-                dw1000_rx_enable();
-            }
-        } while (!(status & (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR)));
+        
+
+        // Ждем событие
+        while (!(status = dw1000_read_sys_status() &
+                (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
 
         if (status & SYS_STATUS_RXFCG) {
-            // Читаем фрейм и отвечаем
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
+
             uint32_t frame_len = dw1000_read_rx_finfo() & 0x7F;
             if (frame_len <= RX_BUF_LEN) {
                 dw1000_read_rx_data(rx_buffer, frame_len);
             }
+
             rx_buffer[ALL_MSG_SN_IDX] = 0;
             if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0) {
-                SEGGER_RTT_printf(0, "[RESP] got poll!\n");
-                // отправить respons
+                SEGGER_RTT_printf(0, "[RESP] got poll\n");
+
+                // T2 - timestamp прием poll (40 бит, берем младшие 32)
+                uint32_t poll_rx_ts = dw1000_read_rx_timestamp();
+
+                // запланировать TX через ~1100 мкс
+                // 1 uus = 65536 DTU
+                uint32_t resp_tx_time = (poll_rx_ts + (1100 * 65536)) >> 8;
+                dw1000_set_delayed_tx_time(resp_tx_time);
+
+                // T3 - заранее вычисленный TX timestamp
+                uint32_t resp_tx_ts = ((uint32_t)(resp_tx_time & 0xFFFFFFFE) << 8) + ANT_DLY;
+
+                // Вписываем timestamp в тело ответа
+                msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
+                msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
+
+                tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
+                dw1000_write_tx_data(tx_resp_msg, sizeof(tx_resp_msg), 0);
+                dw1000_write_tx_fctrl(sizeof(tx_resp_msg), 0, 1);
+
+                int ret = dw1000_start_tx_delayed();    // DWT_START_TX_DELAYED
+
+                if (ret == DW_SUCCESS) {
+                    while (!(dw1000_read_sys_status() & SYS_STATUS_TXFRS)) {}
+                    dw1000_clear_sys_status(SYS_STATUS_TXFRS);
+                    frame_seq_nb++;
+                    SEGGER_RTT_printf(0, "[RESP] response sent\n");
+                } else {
+                    SEGGER_RTT_printf(0, "[ERR] delayed TX failed!\n");
+                    dw1000_rx_reset();
+                }
             }
         } else {
-            // ошибка
-            SEGGER_RTT_printf(0, "[ERR] status=0x%08X\n", status);
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
             dw1000_rx_reset();
         }
+
+        // Перезапускаем приемник для следующего цикла
+        dw1000_rx_enable();
     }
 }
 
