@@ -186,42 +186,35 @@ uint32_t dw1000_read_dev_id(void) {
 // Soft reset via PMSC_CTRL0 register (sub-address 0x03)
 // Mirrors dwt_softreset() from deca_device.c
 static void dw1000_softreset(void) {
-    // 0. Сначала чистим AON - до любого reset!
-    // Если чип стартовал из sleep, AON держит старый конфиг
-    // и это будет мешать инициализации
-    // AON_CTRL bits:
-    //  бит 0 (0x01) - RESTORE - загрузить из AON в регистры
-    //  бит 1 (0x02) - SAVE    - сохранить из регистров в AON array
-    //  бит 2 (0x04) - UPL_CFG - upload config (тоже сохранение, но "другое")
+    // 1. Переключаем системный клок на XTAL осциллятор
+    //    Это обязательно перед любым изменением PMSC -
+    //    PLL клок не стабилен во время reset
+    enableclocks_xti();
+
+    // 2. Отключаем RF sequencing в PMSC_CTRL1
+    //    0x0300 = PMSC_CTRL1_PKTSEQ_DISABLE (биты [9:8] = 11)
+    //    Без этого RF блоки могут остаться в неопределенном состоянии
+    uint16_t ctrl1 = 0x0300;
+    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&ctrl1, 2);
+
+    // 3. Минимальный сброс AON array
+    //    Сначала сбрасываем, командой 0x00, затем сохраняем 0x02
+    //    Это записывает текущие (нулевые) регистры в AON array
+    //    чтобы при следующем wake-up не восстановился старый конфиг
     uint8_t aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    uint16_t aon_wcfg = 0x0000;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
-    uint8_t aon_cfg0 = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
-
-    // Сохраняем чистый AON (SAVE = 0x02)
     aon_ctrl = 0x02;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-
-    // 2. disablesequensing: FORSE_SYS_XTI + disable PMSC of RF
-    uint8_t reg[2];
-    dw1000_read_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0, reg, 2);
-    reg[0] = (reg[0] & 0xFC) | 0x01;
-    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0, &reg[0], 1);
-    uint16_t ctrl1 = 0x0000;
-    dw1000_write_subreg(DW_REG_PMSC, 0x04, (uint8_t *)&ctrl1, 2);
-
-
-    // 3. Reset ALL (PMSC_CTRL0 byte 3 = 0x00)
+    
+    // 4. Сброс всех блоков: HIF, TX, RX, PMSC
+    //    Пишим 0x00 в байт 3 регистра PMSC_CTRL0 (sub-offset 0x03)
     uint8_t reset = 0x00;
     dw1000_write_subreg(DW_REG_PMSC, 0x03, &reset, 1);
 
-    dw_delay(100000);           // ~1ms
+    // 5. Ждем ~1ms - даем PLL залочиться после reset
+    dw_delay(100000);
 
-    // 4. Clear RESET (byte 3 = 0xF0)
+    // 6. Снимаем reset (0xF0 = все биты reset в 1 = нормальная работа)
     uint8_t clear = 0xF0;
     dw1000_write_subreg(DW_REG_PMSC, 0x03, &clear, 1);
 }
