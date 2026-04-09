@@ -403,8 +403,9 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
-    uint8_t ctrl = 0x01;  // RXENAB = бит 8 = второй байт = 0x01
-    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x01, &ctrl, 1);
+    // SYS_CTRL_RXENAB = бит 8 = 0x00000100
+    // Пишем как 32-bit - без sub-address
+    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
 }
 
 void dw1000_read_rx_data(uint8_t *buf, uint8_t len) {
