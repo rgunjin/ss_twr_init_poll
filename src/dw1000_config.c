@@ -52,11 +52,14 @@
 void dw1000_configure(const dw1000_config_t *cfg) {
     (void)cfg;
 
-    // --- SFD workaround FIRST ---
-    // DW1000 silicon bug: SFD not initialised after config unless we do this.
-    // Must be done BEFORE writing RF registers — it resets some of them.
-    uint8_t sys_ctrl = SYS_CTRL_TXSTRT | SYS_CTRL_TRXOFF;
-    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &sys_ctrl, 1);
+    // --- SFD workaround ---
+    // Две ОТДЕЛЬНЫЕ записи - сначала TXSTRT, потом TRXOFF
+    // Это сбрасывает SFD состояние внутри чипа
+    uint8_t ctrl;
+    ctrl = (uint8_t)SYS_CTRL_TXSTRT;
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
+    ctrl = (uint8_t)SYS_CTRL_TRXOFF;
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
 
     // Disable double RX buffer - siplifies buffer managment
     uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
