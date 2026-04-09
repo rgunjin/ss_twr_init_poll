@@ -89,6 +89,42 @@ int main(void) {
 
     spi_init(SPIM_FREQ_2M);
 
+    // =========================================================
+    // КРИТИЧНО: чистим AON сразу после reset, ДО dw1000_init()
+    // Чип только что загрузил AON array в регистры аппаратно.
+    // Если там был SLEEP_EN — он сейчас в процессе засыпания.
+    // Перебиваем это немедленно.
+    // =========================================================
+
+    // Сначала force TRXOFF чтобы прервать любую активность
+    uint32_t trxoff = SYS_CTRL_TRXOFF;
+    uint8_t trxoff_buffer[4] = {
+        (uint8_t)(trxoff),
+        (uint8_t)(trxoff >> 8),
+        (uint8_t)(trxoff >> 16),
+        (uint8_t)(trxoff >> 24)
+    };
+    // Пишем напрямую без оберток - они еще не инициализированны
+    // (или использую dw1000_write32 если spi_init уже вызван)
+    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
+    delay(5000);
+
+    // Чистим AON немедленно
+    uint8_t zero = 0x00;
+    uint16_t zero16 = 0x0000;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &zero, 1);
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&zero16, 2);
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &zero, 1);
+    uint8_t save = 0x02;        // SAVE
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &save, 1);
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &zero, 1);
+
+    // Теперь чистим статус
+    dw1000_clear_sys_status(0xFFFFFFFF);
+    delay(10000);
+
+    // =========================================================
+
     if (dw1000_init() != DW_SUCCESS) {
         SEGGER_RTT_printf(0, "[INIT] FAILED\n");
         led_on(14);
