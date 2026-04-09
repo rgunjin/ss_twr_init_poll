@@ -228,10 +228,15 @@ static void dw1000_softreset(void) {
 
 
 int dw1000_init(void) {
+    SEGGER_RTT_printf(0, "[INIT] step 0: status=0x%08X\n",
+                      dw1000_read_sys_status());
     // 0, Force TRXOFF - вывести из любого активного состояния
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
     dw_delay(10000);
     dw1000_clear_sys_status(0xFFFFFFFF);
+
+    SEGGER_RTT_printf(0, "[INIT] step 1 after clear: status=0x%08X\n",
+                      dw1000_read_sys_status());
 
     // 1. Verify DEV_ID before reset - fail fast is SPI broken
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {
@@ -244,6 +249,9 @@ int dw1000_init(void) {
     // 3. Small delay after reset - DW1000-datasheet recommends at least 10us.
     // At 64MHz, 1000 iterations ~ 16us
     dw_delay(100000);
+
+    SEGGER_RTT_printf(0, "[INIT] step 2 after softreset: status=0x%08X\n",
+                      dw1000_read_sys_status());
 
     // 4. Switch system clock to XTAL - required before reading OTP
     enableclocks_xti();
@@ -275,12 +283,21 @@ int dw1000_init(void) {
     uint8_t xtal = DW_FS_XTALT_RESERVED | (xtrim & DW_FS_XTALT_MASK);
     dw1000_write_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_XTALT, &xtal, 1);
 
+    SEGGER_RTT_printf(0, "[INIT] step 3 before LDE: status=0x%08X\n",
+                      dw1000_read_sys_status());
+
     // 9. Load LDE microcode from ROM into chip RAM
     //    This enables accurate RX timestamps required for ranging
     load_lde_microcode();
 
+    SEGGER_RTT_printf(0, "[INIT] step 4 after LDE: status=0x%08X\n",
+                      dw1000_read_sys_status());
+
     // 10. Return clock to normal sequenced mode
     enableclocks_seq();
+
+    SEGGER_RTT_printf(0, "[INIT] step 5 after enableclocks_seq: status=0x%08X\n",
+                      dw1000_read_sys_status());
 
     // 10a. Enable LDE algorithm - must be set after loading microcode
     // Without this bit RX timestamp are garbage even if RX works
@@ -290,6 +307,9 @@ int dw1000_init(void) {
     dw1000_read_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&pmsc_ctrl1, 2);
     pmsc_ctrl1 |= (1U << 9);        // LDERUN
     dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&pmsc_ctrl1, 2);
+
+    SEGGER_RTT_printf(0, "[INIT] step 6 after LDERUN: status=0x%08X\n",
+                      dw1000_read_sys_status());
 
     // 11. AON - запретить автоматический уход в sleep
     // В этом примере sleep не используем, поэтому все занулили
@@ -311,14 +331,16 @@ int dw1000_init(void) {
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG1, &aon_cfg1, 1);
 
     // IV) Сохранить эту конфигурацию в AON массив
-    // Сначала пишем 0 (сброс команды), потом UPL_CFG (0x04)
-    // UPL_CFG = Upload config from register into AON array
+    // Сначала пишем 0 (сброс команды), потом SAVE (0x02)
     uint8_t aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
     aon_ctrl = 0x02;        
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
     aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+
+    SEGGER_RTT_printf(0, "[INIT] step 7 after AON: status=0x%08X\n",
+                      dw1000_read_sys_status());
 
     // 12. Final sanity check - verify chip still responds after init
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {
