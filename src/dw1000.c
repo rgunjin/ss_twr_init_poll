@@ -186,7 +186,27 @@ uint32_t dw1000_read_dev_id(void) {
 // Soft reset via PMSC_CTRL0 register (sub-address 0x03)
 // Mirrors dwt_softreset() from deca_device.c
 static void dw1000_softreset(void) {
-    // 1. disablesequensing: FORSE_SYS_XTI + disable PMSC of RF
+    // 0. Сначала чистим AON - до любого reset!
+    // Если чип стартовал из sleep, AON держит старый конфиг
+    // и это будет мешать инициализации
+    // AON_CTRL bits:
+    //  бит 0 (0x01) - RESTORE - загрузить из AON в регистры
+    //  бит 1 (0x02) - SAVE    - сохранить из регистров в AON array
+    //  бит 2 (0x04) - UPL_CFG - upload config (тоже сохранение, но "другое")
+    uint8_t aon_ctrl = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+    uint16_t aon_wcfg = 0x0000;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
+    uint8_t aon_cfg0 = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
+
+    // Сохраняем чистый AON (SAVE = 0x02)
+    aon_ctrl = 0x02;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+    aon_ctrl = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
+
+    // 2. disablesequensing: FORSE_SYS_XTI + disable PMSC of RF
     uint8_t reg[2];
     dw1000_read_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0, reg, 2);
     reg[0] = (reg[0] & 0xFC) | 0x01;
@@ -194,35 +214,21 @@ static void dw1000_softreset(void) {
     uint16_t ctrl1 = 0x0000;
     dw1000_write_subreg(DW_REG_PMSC, 0x04, (uint8_t *)&ctrl1, 2);
 
-    // 2. Clear AON_WCFG
-    uint16_t aon_wcfg = 0x0000;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
 
-    // 3. Clear AON_CFG0
-    uint8_t aon_cfg0 = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
-
-    // 4. AON array upload: write 0x00 then AON_CTRL_SAVE (0x02)
-    uint8_t aon_ctrl = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x02;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-
-    // 5. Reset ALL (PMSC_CTRL0 byte 3 = 0x00)
+    // 3. Reset ALL (PMSC_CTRL0 byte 3 = 0x00)
     uint8_t reset = 0x00;
     dw1000_write_subreg(DW_REG_PMSC, 0x03, &reset, 1);
 
-    // 6. Delay ~1ms
-    dw_delay(100000);
+    dw_delay(100000);           // ~1ms
 
-    // 7. Clear RESET (byte 3 = 0xF0)
+    // 4. Clear RESET (byte 3 = 0xF0)
     uint8_t clear = 0xF0;
     dw1000_write_subreg(DW_REG_PMSC, 0x03, &clear, 1);
 }
 
 
 int dw1000_init(void) {
-    // 0, Force Chip to INIT - it may be in SLP2INIT state after power-on
+    // 0, Force TRXOFF - вывести из любого активного состояния
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
     dw_delay(10000);
     dw1000_clear_sys_status(0xFFFFFFFF);
@@ -309,14 +315,14 @@ int dw1000_init(void) {
     // UPL_CFG = Upload config from register into AON array
     uint8_t aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x04;        // AON_CTRL_UPL_CFG
+    aon_ctrl = 0x02;        
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    // Сброс команды просле выполнения
     aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
 
     // 12. Final sanity check - verify chip still responds after init
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {
+        SEGGER_RTT_printf(0, "[INIT] DEV_ID check failed after init\n");
         return DW_ERROR;
     }
     return DW_SUCCESS;
