@@ -115,6 +115,9 @@ void dw1000_configure(const dw1000_config_t *cfg) {
         ((uint32_t)CFG_PRF_VAL << 18) |
         ((uint32_t)CFG_TX_CODE << 22) |
         ((uint32_t)CFG_RX_CODE << 27);
+    SEGGER_RTT_printf(0, "[DBG] chan=%d prf=%d txcode=%d rxcode=%d\n",
+                  CFG_CHAN, CFG_PRF_VAL, CFG_TX_CODE, CFG_RX_CODE);
+    SEGGER_RTT_printf(0, "[DBG] chan_ctrl computed=0x%08X\n", chan_ctrl);
     dw1000_write32(DW_REG_CHAN_CTRL, chan_ctrl);
 
     // --- TX_FCTRL: preamble length + PRF + datarate ---
