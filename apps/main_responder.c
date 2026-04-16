@@ -161,6 +161,12 @@ int main(void) {
     led_off(31);
 
     dw1000_rx_enable();
+    SEGGER_RTT_printf(0, "[DBG] SYS_STATE=0x%08X\n",
+                  dw1000_read32(DW_REG_SYS_STATE));
+    SEGGER_RTT_printf(0, "[DBG] status after rx_enable=0x%08X\n",
+                  dw1000_read_sys_status());
+
+
     SEGGER_RTT_printf(0, "[RX] waiting...\n");
 
     // =========================================================================
