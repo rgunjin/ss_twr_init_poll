@@ -129,6 +129,22 @@ int main(void) {
     dw1000_configure(&cfg);
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
+    // Проверяем что записалось в RF регистры
+    uint32_t chan_ctrl = dw1000_read32(DW_REG_CHAN_CTRL);
+    SEGGER_RTT_printf(0, "[DBG] CHAN_CTRL=0x%08X\n", chan_ctrl);
+
+    uint8_t rxctrlh = 0;
+    dw1000_read_subreg(DW_REG_RF_CONF, DW_SUBREG_RF_RXCTRLH, &rxctrlh, 1);
+    SEGGER_RTT_printf(0, "[DBG] RF_RXCTRLH=0x%02X\n", rxctrlh);
+
+    uint16_t tune1a = 0;
+    dw1000_read_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1A, (uint8_t*)&tune1a, 2);
+    SEGGER_RTT_printf(0, "[DBG] DRX_TUNE1A=0x%04X\n", tune1a);
+
+    uint16_t sfdto = 0;
+    dw1000_read_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_SFDTOC, (uint8_t*)&sfdto, 2);
+    SEGGER_RTT_printf(0, "[DBG] DRX_SFDTOC=0x%04X\n", sfdto);
+
     // 10а. Ждём пока Clock PLL залочится
     //     Бит CPLOCK (бит 1) в SYS_STATUS = PLL locked
     //     Таймаут ~1ms на всякий случай
