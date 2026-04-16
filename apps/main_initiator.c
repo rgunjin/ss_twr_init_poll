@@ -139,6 +139,17 @@ int main(void) {
     dw1000_configure(&cfg);
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
+    // 10а. Ждём пока Clock PLL залочится
+    //     Бит CPLOCK (бит 1) в SYS_STATUS = PLL locked
+    //     Таймаут ~1ms на всякий случай
+    uint32_t timeout = 100000;
+    while (timeout--) {
+        if (dw1000_read_sys_status() & SYS_STATUS_CPLOCK) break;
+    }
+    SEGGER_RTT_printf(0, "[INIT] PLL lock status: 0x%08X (timeout=%lu)\n",
+                  dw1000_read_sys_status(), timeout);
+
+
     SEGGER_RTT_printf(0, "[INIT] OK - starting ranging\n");
     led_off(30);
 

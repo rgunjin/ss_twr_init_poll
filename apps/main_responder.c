@@ -135,6 +135,17 @@ int main(void) {
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
+    dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
+
+    // 10а. Ждём пока Clock PLL залочится
+    //     Бит CPLOCK (бит 1) в SYS_STATUS = PLL locked
+    //     Таймаут ~1ms на всякий случай
+    uint32_t timeout = 100000;
+    while (timeout--) {
+        if (dw1000_read_sys_status() & SYS_STATUS_CPLOCK) break;
+    }
+    SEGGER_RTT_printf(0, "[INIT] PLL lock status: 0x%08X (timeout=%lu)\n",
+                  dw1000_read_sys_status(), timeout);
 
     uint8_t pllbuf[4];
     dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLCFG, pllbuf, 4);
@@ -145,7 +156,6 @@ int main(void) {
     SEGGER_RTT_printf(0, "[CFG] FS_PLLCFG=0x%08X FS_PLLTUNE=0x%02X\n", pllcfg, plltune);
 
     SEGGER_RTT_printf(0, "[INIT] SYS_CFG=0x%08X\n", dw1000_read32(DW_REG_SYS_CFG));
-    dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
     SEGGER_RTT_printf(0, "[INIT] OK - waiting for poll\n");
     led_off(31);
@@ -161,7 +171,7 @@ int main(void) {
         
 
         // Ждем событие
-        while (!(status = dw1000_read_sys_status() &
+        while (!((status = dw1000_read_sys_status()) &
                 (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
 
         SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
