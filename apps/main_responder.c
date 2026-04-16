@@ -96,14 +96,6 @@ int main(void) {
     // Перебиваем это немедленно.
     // =========================================================
 
-    // Сначала force TRXOFF чтобы прервать любую активность
-    uint32_t trxoff = SYS_CTRL_TRXOFF;
-    uint8_t trxoff_buffer[4] = {
-        (uint8_t)(trxoff),
-        (uint8_t)(trxoff >> 8),
-        (uint8_t)(trxoff >> 16),
-        (uint8_t)(trxoff >> 24)
-    };
     // Пишем напрямую без оберток - они еще не инициализированны
     // (или использую dw1000_write32 если spi_init уже вызван)
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
@@ -176,9 +168,16 @@ int main(void) {
         uint32_t status;
         
 
+        uint32_t dbg_count = 0;
         // Ждем событие
         while (!((status = dw1000_read_sys_status()) &
-                (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
+                (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {
+            dbg_count++;
+            if (dbg_count % 500000 == 0) {
+                SEGGER_RTT_printf(0, "[POLL] status=0x%08X\n",
+                          dw1000_read_sys_status());
+            }
+        }
 
         SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
 

@@ -98,14 +98,6 @@ int main(void) {
     // Перебиваем это немедленно.
     // =========================================================
 
-    // Сначала force TRXOFF чтобы прервать любую активность
-    uint32_t trxoff = SYS_CTRL_TRXOFF;
-    uint8_t trxoff_buffer[4] = {
-        (uint8_t)(trxoff),
-        (uint8_t)(trxoff >> 8),
-        (uint8_t)(trxoff >> 16),
-        (uint8_t)(trxoff >> 24)
-    };
     // Пишем напрямую без оберток - они еще не инициализированны
     // (или использую dw1000_write32 если spi_init уже вызван)
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
