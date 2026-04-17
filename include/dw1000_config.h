@@ -72,7 +72,7 @@ typedef struct {
     .nsSFD         = 0,          \
     .dataRate      = DW_BR_110K,  \
     .phrMode       = DW_PHRMODE_STD, \
-    .sfdTO         = 1089 \
+    .sfdTO         = 0xFFFF \
 }
 
 // sfdTO = preamble_length + SFD_length + 1
