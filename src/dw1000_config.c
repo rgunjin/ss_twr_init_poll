@@ -141,4 +141,9 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     buf[2] = (uint8_t)(fctrl >> 16);
     buf[3] = (uint8_t)(fctrl >> 24);
     dw1000_write_reg(DW_REG_TX_FCTRL, buf, 5);
+
+    uint8_t verify[5];
+    dw1000_read_reg(DW_REG_TX_FCTRL, verify, 5);
+    SEGGER_RTT_printf(0, "[DBG] TX_FCTRL=0x%02X%02X%02X%02X%02X\n",
+                      verify[4], verify[3], verify[2], verify[1], verify[0]);
 }
