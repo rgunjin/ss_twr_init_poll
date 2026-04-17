@@ -159,8 +159,6 @@ int main(void) {
             SEGGER_RTT_printf(0, "[RX] alive, status=0x%08X\n",
                               dw1000_read_sys_status());
         }
-
-        delay(100);
     }
 }
 
