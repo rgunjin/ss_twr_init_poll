@@ -21,10 +21,10 @@
 // DRX - digital recieve tuning
 // PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
 #define CFG_DRX_TUNE0b      0x000A          // was 6.8Mbps, standard SFD, now 110kbps
-#define CFG_DRX_TUNE1a      0x0064          // PRF 64MHz
-#define CFG_DRX_TUNE1b      0x0020          // preamble > 64 symbols, 6.8Mbps
+#define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
+#define CFG_DRX_TUNE1b      0x0064          // preamble > 64 symbols, 6.8Mbps
 #define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
-#define CFG_DRX_TUNE4H      0x0028          // preamble >= 128 symbols
+#define CFG_DRX_TUNE4H      0x0010          // preamble >= 128 symbols
 
 // AGC — automatic gain control
 #define CFG_AGC_TUNE1       0x889B          // PRF 64MHz
@@ -127,12 +127,15 @@ void dw1000_configure(const dw1000_config_t *cfg) {
                      ((uint32_t)buf[1] << 8)  |
                      ((uint32_t)buf[2] << 16) |
                      ((uint32_t)buf[3] << 24);
-    fctrl &= ~(0x3UL << 16);
-    fctrl &= ~(0xFUL << 18);
-    fctrl &= ~(0x3UL << 13);
-    fctrl |= ((uint32_t)DW_PRF_64M  << 16);
-    fctrl |= ((uint32_t)DW_PLEN_128 << 18);
+
+    fctrl &= ~(0x3UL  << 13);   // datarate bits [14:13]
+    fctrl &= ~(0x3UL  << 16);   // PRF bits [17:16]
+    fctrl &= ~(0x3FUL << 18);   // preamble bits [23:18]
+
     fctrl |= ((uint32_t)DW_BR_110K   << 13);
+    fctrl |= ((uint32_t)DW_PRF_64M   << 16);
+    fctrl |= ((uint32_t)DW_PLEN_1024 << 18);
+
     buf[0] = (uint8_t)(fctrl);
     buf[1] = (uint8_t)(fctrl >> 8);
     buf[2] = (uint8_t)(fctrl >> 16);

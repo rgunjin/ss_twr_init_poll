@@ -65,14 +65,14 @@ typedef struct {
 #define DW1000_DEFAULT_CONFIG  {  \
     .chan          = 5,           \
     .prf           = DW_PRF_64M, \
-    .txPreambLength= DW_PLEN_128,\
+    .txPreambLength= DW_PLEN_1024,\
     .rxPAC         = DW_PAC8,    \
     .txCode        = 9,          \
     .rxCode        = 9,          \
     .nsSFD         = 0,          \
-    .dataRate      = DW_BR_6M8,  \
+    .dataRate      = DW_BR_110K,  \
     .phrMode       = DW_PHRMODE_STD, \
-    .sfdTO         = 129 + 8 + 1 \
+    .sfdTO         = 1089 \
 }
 
 // sfdTO = preamble_length + SFD_length + 1
