@@ -115,6 +115,8 @@ int main(void) {
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
     SEGGER_RTT_printf(0, "[INIT] OK - waiting for poll\n");
+    SEGGER_RTT_printf(0, "[DBG] SYS_CFG=0x%08X\n", 
+    dw1000_read32(DW_REG_SYS_CFG));
     led_off(31);
 
     // =========================================================
