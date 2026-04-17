@@ -199,8 +199,7 @@
 #define SYS_STATUS_ALL_RX_GOOD  (SYS_STATUS_RXDFR | SYS_STATUS_RXFCG)
 #define SYS_STATUS_ALL_RX_ERR   (SYS_STATUS_RXPHE | SYS_STATUS_RXFCE  | \
                                  SYS_STATUS_RXRFSL | SYS_STATUS_RXSFDTO | \
-                                 SYS_STATUS_LDEERR | SYS_STATUS_RXRFTO | \
-                                 SYS_STATUS_SLP2INIT)
+                                 SYS_STATUS_LDEERR | SYS_STATUS_RXRFTO)
 #define SYS_STATUS_ALL_TX       (SYS_STATUS_TXFRS)
 
 // =============================================================================
