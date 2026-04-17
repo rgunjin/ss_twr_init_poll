@@ -135,6 +135,15 @@ int main(void) {
 
         } else if (status & SYS_STATUS_ALL_RX_ERR) {
             SEGGER_RTT_printf(0, "[RX] error status=0x%08X\n", status);
+
+            if (status & SYS_STATUS_RXPHE)   SEGGER_RTT_printf(0, "  -> RXPHE: PHR error\n");
+            if (status & SYS_STATUS_RXFCE)   SEGGER_RTT_printf(0, "  -> RXFCE: FCS error\n");
+            if (status & SYS_STATUS_RXRFSL)  SEGGER_RTT_printf(0, "  -> RXRFSL: Reed Solomon error\n");
+            if (status & SYS_STATUS_RXRFTO)  SEGGER_RTT_printf(0, "  -> RXRFTO: frame wait timeout\n");
+            if (status & SYS_STATUS_LDEERR)  SEGGER_RTT_printf(0, "  -> LDEERR: LDE error\n");
+            if (status & SYS_STATUS_RXSFDTO) SEGGER_RTT_printf(0, "  -> RXSFDTO: SFD timeout\n");
+            if (status & SYS_STATUS_SLP2INIT) SEGGER_RTT_printf(0, "  -> SLP2INIT\n");
+
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
             dw1000_rx_reset();
             dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
