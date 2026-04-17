@@ -120,11 +120,13 @@ int main(void) {
     // =========================================================
     // МИНИМАЛЬНЫЙ RX ТЕСТ
     // =========================================================
+    dw1000_clear_sys_status(0xFFFFFFFF);        // Чистим статус
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
     SEGGER_RTT_printf(0, "[RX] receiver enabled\n");
     SEGGER_RTT_printf(0, "[DBG] SYS_STATE=0x%08X\n",
                       dw1000_read32(DW_REG_SYS_STATE));
 
+    uint32_t dbg_count = 0;
     while (1) {
         uint32_t status = dw1000_read_sys_status();
 
@@ -150,6 +152,12 @@ int main(void) {
 
         } else if (status & SYS_STATUS_RXPRD) {
             SEGGER_RTT_printf(0, "[RX] preamble detected!\n");
+        }
+        
+         dbg_count++;
+        if (dbg_count % 2000000 == 0) {
+            SEGGER_RTT_printf(0, "[RX] alive, status=0x%08X\n",
+                              dw1000_read_sys_status());
         }
 
         delay(100);
