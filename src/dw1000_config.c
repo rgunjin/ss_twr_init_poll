@@ -36,7 +36,7 @@
 #define CFG_LDE_REPC        0x28F4          // preamble code 9
 
 // SFD timeout: preamble(128) + SFD(8) + 1 = 137
-#define CFG_SFD_TO          137
+#define CFG_SFD_TO          1000
 
 // CHAN_CTRL fields
 #define CFG_CHAN            5
