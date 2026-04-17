@@ -55,8 +55,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
 
     // Disable double RX buffer - siplifies buffer managment
     uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
-    sys_cfg |= SYS_CFG_DIS_DRXB;
-    sys_cfg &= ~SYS_CFG_RXM110K;
+    sys_cfg |= SYS_CFG_DIS_DRXB | SYS_CFG_RXM110K;
     dw1000_write32(DW_REG_SYS_CFG, sys_cfg);
 
     // --- Frequency synthesiser (PLL) ---
