@@ -75,47 +75,32 @@ static void msg_set_ts(uint8_t *buf, uint32_t ts) {
 // =============================================================================
 // main
 // =============================================================================
-
 int main(void) {
     led_init();
     led_on(31);
 
-    // Hardware reset DW1000 via RST pin (P0.24)
+    // Hardware reset
     NRF_GPIO->DIRSET = (1UL << 24);
     NRF_GPIO->OUTCLR = (1UL << 24);
-    delay(10000);                           // ~1ms low
-    NRF_GPIO->DIRCLR = (1UL << 24);         // release RST (hi-z, open drain)
-    delay(5000000);                         // ~80ms - let XTAL stabilize
+    delay(10000);
+    NRF_GPIO->DIRCLR = (1UL << 24);
+    delay(5000000);
 
     spi_init(SPIM_FREQ_2M);
 
-    // =========================================================
-    // КРИТИЧНО: чистим AON сразу после reset, ДО dw1000_init()
-    // Чип только что загрузил AON array в регистры аппаратно.
-    // Если там был SLEEP_EN — он сейчас в процессе засыпания.
-    // Перебиваем это немедленно.
-    // =========================================================
-
-    // Пишем напрямую без оберток - они еще не инициализированны
-    // (или использую dw1000_write32 если spi_init уже вызван)
+    // AON cleanup
     dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
     delay(5000);
-
-    // Чистим AON немедленно
     uint8_t zero = 0x00;
     uint16_t zero16 = 0x0000;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &zero, 1);
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&zero16, 2);
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &zero, 1);
-    uint8_t save = 0x02;        // SAVE
+    uint8_t save = 0x02;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &save, 1);
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &zero, 1);
-
-    // Теперь чистим статус
     dw1000_clear_sys_status(0xFFFFFFFF);
     delay(10000);
-
-    // =========================================================
 
     if (dw1000_init() != DW_SUCCESS) {
         SEGGER_RTT_printf(0, "[INIT] FAILED\n");
@@ -129,131 +114,36 @@ int main(void) {
     dw1000_configure(&cfg);
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
-    // Проверяем что записалось в RF регистры
-    uint32_t chan_ctrl = dw1000_read32(DW_REG_CHAN_CTRL);
-    SEGGER_RTT_printf(0, "[DBG] CHAN_CTRL=0x%08X\n", chan_ctrl);
-
-    uint8_t rxctrlh = 0;
-    dw1000_read_subreg(DW_REG_RF_CONF, DW_SUBREG_RF_RXCTRLH, &rxctrlh, 1);
-    SEGGER_RTT_printf(0, "[DBG] RF_RXCTRLH=0x%02X\n", rxctrlh);
-
-    uint16_t tune1a = 0;
-    dw1000_read_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1A, (uint8_t*)&tune1a, 2);
-    SEGGER_RTT_printf(0, "[DBG] DRX_TUNE1A=0x%04X\n", tune1a);
-
-    uint16_t sfdto = 0;
-    dw1000_read_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_SFDTOC, (uint8_t*)&sfdto, 2);
-    SEGGER_RTT_printf(0, "[DBG] DRX_SFDTOC=0x%04X\n", sfdto);
-
-    // 10а. Ждём пока Clock PLL залочится
-    //     Бит CPLOCK (бит 1) в SYS_STATUS = PLL locked
-    //     Таймаут ~1ms на всякий случай
-    uint32_t timeout = 100000;
-    while (timeout--) {
-        if (dw1000_read_sys_status() & SYS_STATUS_CPLOCK) break;
-    }
-    SEGGER_RTT_printf(0, "[INIT] PLL lock status: 0x%08X (timeout=%lu)\n",
-                  dw1000_read_sys_status(), timeout);
-
-    uint8_t pllbuf[4];
-    dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLCFG, pllbuf, 4);
-    uint32_t pllcfg = (uint32_t)pllbuf[0] | ((uint32_t)pllbuf[1]<<8) |
-                  ((uint32_t)pllbuf[2]<<16) | ((uint32_t)pllbuf[3]<<24);
-    uint8_t plltune = 0;
-    dw1000_read_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_PLLTUNE, &plltune, 1);
-    SEGGER_RTT_printf(0, "[CFG] FS_PLLCFG=0x%08X FS_PLLTUNE=0x%02X\n", pllcfg, plltune);
-
-    SEGGER_RTT_printf(0, "[INIT] SYS_CFG=0x%08X\n", dw1000_read32(DW_REG_SYS_CFG));
-
     SEGGER_RTT_printf(0, "[INIT] OK - waiting for poll\n");
     led_off(31);
 
-    dw1000_rx_enable();
+    // =========================================================
+    // МИНИМАЛЬНЫЙ RX ТЕСТ
+    // =========================================================
+    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+    SEGGER_RTT_printf(0, "[RX] receiver enabled\n");
     SEGGER_RTT_printf(0, "[DBG] SYS_STATE=0x%08X\n",
-                  dw1000_read32(DW_REG_SYS_STATE));
-    SEGGER_RTT_printf(0, "[DBG] status after rx_enable=0x%08X\n",
-                  dw1000_read_sys_status());
+                      dw1000_read32(DW_REG_SYS_STATE));
 
-
-    SEGGER_RTT_printf(0, "[RX] waiting...\n");
-
-    // =========================================================================
-    // Responder loop
-    // =========================================================================
     while (1) {
-        uint32_t status;
-        
-
-        uint32_t dbg_count = 0;
-        // Ждем событие
-        while (!((status = dw1000_read_sys_status()) &
-                (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {
-            dbg_count++;
-            if (dbg_count % 500000 == 0) {
-                SEGGER_RTT_printf(0, "[POLL] status=0x%08X\n",
-                          dw1000_read_sys_status());
-            }
-        }
-
-        SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
+        uint32_t status = dw1000_read_sys_status();
 
         if (status & SYS_STATUS_RXFCG) {
+            SEGGER_RTT_printf(0, "[RX] got frame! status=0x%08X\n", status);
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
+            dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
 
-            uint32_t frame_len = dw1000_read_rx_finfo() & 0x7F;
-            if (frame_len <= RX_BUF_LEN) {
-                dw1000_read_rx_data(rx_buffer, frame_len);
-            }
-
-            rx_buffer[ALL_MSG_SN_IDX] = 0;
-            if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) == 0) {
-                SEGGER_RTT_printf(0, "[RESP] got poll\n");
-
-                // T2 - timestamp прием poll (40 бит, берем младшие 32)
-                uint64_t poll_rx_ts = dw1000_read_rx_timestamp_u64();
-
-                // Вычисляем время отправки ответа
-                #define POLL_RX_TO_RESP_TX_DLY_UUS  1100
-                #define UUS_TO_DWT_TIME             65536
-
-                uint32_t resp_tx_time = (uint32_t)((poll_rx_ts +
-                                        (uint64_t)(POLL_RX_TO_RESP_TX_DLY_UUS *
-                                         UUS_TO_DWT_TIME)) >> 8);
-                dw1000_set_delayed_tx_time(resp_tx_time);
-
-
-
-                // T3 - заранее вычисленный TX timestamp
-                uint32_t resp_tx_ts = ((uint32_t)(resp_tx_time & 0xFFFFFFFE) << 8) + ANT_DLY;
-
-                // Вписываем timestamp в тело ответа
-                msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], poll_rx_ts);
-                msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], resp_tx_ts);
-
-                // Готовим фрейм
-                tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
-                dw1000_write_tx_data(tx_resp_msg, sizeof(tx_resp_msg), 0);
-                dw1000_write_tx_fctrl(sizeof(tx_resp_msg), 0, 1);
-
-                // Запускаем отложенную передачу
-                int ret = dw1000_start_tx_delayed();    // DWT_START_TX_DELAYED
-                if (ret == DW_SUCCESS) {
-                    while (!(dw1000_read_sys_status() & SYS_STATUS_TXFRS)) {}
-                    dw1000_clear_sys_status(SYS_STATUS_TXFRS);
-                    frame_seq_nb++;
-                    SEGGER_RTT_printf(0, "[RESP] response sent\n");
-                } else {
-                    SEGGER_RTT_printf(0, "[ERR] delayed TX failed!\n");
-                    dw1000_rx_reset();
-                }
-            }
-        } else {
+        } else if (status & SYS_STATUS_ALL_RX_ERR) {
+            SEGGER_RTT_printf(0, "[RX] error status=0x%08X\n", status);
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
             dw1000_rx_reset();
+            dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+
+        } else if (status & SYS_STATUS_RXPRD) {
+            SEGGER_RTT_printf(0, "[RX] preamble detected!\n");
         }
 
-        // Перезапускаем приемник для следующего цикла
-        dw1000_rx_enable();
+        delay(100);
     }
 }
 

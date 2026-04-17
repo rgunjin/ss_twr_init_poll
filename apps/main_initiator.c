@@ -131,77 +131,33 @@ int main(void) {
     dw1000_configure(&cfg);
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
-    // 10а. Ждём пока Clock PLL залочится
-    //     Бит CPLOCK (бит 1) в SYS_STATUS = PLL locked
-    //     Таймаут ~1ms на всякий случай
-    uint32_t timeout = 100000;
-    while (timeout--) {
-        if (dw1000_read_sys_status() & SYS_STATUS_CPLOCK) break;
-    }
-    SEGGER_RTT_printf(0, "[INIT] PLL lock status: 0x%08X (timeout=%lu)\n",
-                  dw1000_read_sys_status(), timeout);
-
-
     SEGGER_RTT_printf(0, "[INIT] OK - starting ranging\n");
     led_off(30);
 
-    // =========================================================================
-    // Ranging loop
-    // =========================================================================
+    // =========================================================
+    // МИНИМАЛЬНЫЙ TX ТЕСТ
+    // =========================================================
+    uint8_t seq = 0;
     while (1) {
-        // 1. Prepair and send Poll
-        tx_poll_msg[ALL_MSG_SN_IDX] = frame_seq_nb;
-        dw1000_clear_sys_status(SYS_STATUS_TXFRS);
+        tx_poll_msg[ALL_MSG_SN_IDX] = seq++;
+
+        dw1000_clear_sys_status(SYS_STATUS_TXFRS | SYS_STATUS_TXFRB |
+                                SYS_STATUS_TXPRS | SYS_STATUS_TXPHS);
+
         dw1000_write_tx_data(tx_poll_msg, sizeof(tx_poll_msg), 0);
         dw1000_write_tx_fctrl(sizeof(tx_poll_msg), 0, 1);
-        dw1000_start_tx(1);     // wait4resp = 1; auto-enable RX after TX
-        SEGGER_RTT_printf(0, "[TX] poll sent #%d\n", frame_seq_nb);
+        dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TXSTRT);
 
-        // 2. Poll SYS_STATUS until RX done or error
         uint32_t status;
-        while (!((status = dw1000_read_sys_status()) &
-                        (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_ERR))) {}
-
-        SEGGER_RTT_printf(0, "[RX] status=0x%08X\n", status);
-        frame_seq_nb++;
-
-        if (status & SYS_STATUS_RXFCG) {
-            // 3. Read received frame
-            dw1000_clear_sys_status(SYS_STATUS_RXFCG);
-            uint32_t frame_len = dw1000_read_rx_finfo() & 0x7F;
-            if (frame_len <= RX_BUF_LEN) {
-                dw1000_read_rx_data(rx_buffer, frame_len);
+        uint32_t timeout = 1000000;
+        while (!((status = dw1000_read_sys_status()) & SYS_STATUS_TXFRS)) {
+            if (--timeout == 0) {
+                SEGGER_RTT_printf(0, "[TX] TIMEOUT status=0x%08X\n", status);
+                break;
             }
-
-            // 4. Validate frame - clear sequence  number before compare
-            rx_buffer[ALL_MSG_SN_IDX] = 0;
-            if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) == 0) {
-                    // 5. Read loacal timestamps
-                    uint32_t poll_tx_ts = dw1000_read_tx_timestamp(); // T1
-                    uint32_t resp_rx_ts = dw1000_read_rx_timestamp(); // T4
-
-                    // 6. Extract remote timestamps for response payload
-                    uint32_t poll_rx_ts = msg_get_ts(&rx_buffer[RESP_MSG_POLL_RX_TS_IDX]); // T2
-                    uint32_t resp_tx_ts = msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX]); // T3
-
-                    // 7. Compute time of flight and distance
-                    uint32_t rtd_init = (uint32_t)(resp_rx_ts - poll_tx_ts);
-                    uint32_t rtd_resp = (uint32_t)(resp_tx_ts - poll_rx_ts);
-                    double tof = ((rtd_init - rtd_resp) / 2.0) * DWT_TIME_UNITS;
-                    double distance = tof * SPEED_OF_LIGHT;
-
-                    // SEGGER_RTT_printf does not support %f - print as cm integer
-                    SEGGER_RTT_printf(0, "dist: %d cm\n", (int)(distance * 100));
-                    led_on(30);
-                    delay(10000);
-                    led_off(30);
-            }
-        } else {
-            // RX error - clear flags and reset receiver
-            dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
-            dw1000_rx_reset();
         }
 
-        delay(1000000);     // pause between ranging  exchanges
+        SEGGER_RTT_printf(0, "[TX] seq=%d status=0x%08X\n", seq, status);
+        delay(1000000);
     }
 }
