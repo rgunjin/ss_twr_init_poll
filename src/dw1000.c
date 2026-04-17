@@ -367,10 +367,6 @@ void dw1000_write_tx_fctrl(uint8_t len, uint8_t offset, uint8_t ranging) {
     fctrl &= ~0x3FFUL;
     fctrl |= (uint32_t)(len + 2) & 0x3FF;   // +2 for CRC
 
-    // Clear and set buffer offset bits [22:16]
-    fctrl &= ~(0x3FUL << 16);
-    fctrl |= ((uint32_t)offset & 0x3F) << 16;
-
     // Set or clear ranging bit [15]
     if (ranging) {
         fctrl |= TX_FCTRL_TR;
