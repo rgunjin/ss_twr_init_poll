@@ -20,7 +20,7 @@
 
 // DRX - digital recieve tuning
 // PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
-#define CFG_DRX_TUNE0b      0x000A          // was 6.8Mbps, standard SFD, now 110kbps
+#define CFG_DRX_TUNE0b      0x0016          // 110kbps, non-standard SFD
 #define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
 #define CFG_DRX_TUNE1b      0x0064          // preamble > 64 symbols, 6.8Mbps
 #define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
@@ -114,6 +114,10 @@ void dw1000_configure(const dw1000_config_t *cfg) {
                   CFG_CHAN, CFG_PRF_VAL, CFG_TX_CODE, CFG_RX_CODE);
     SEGGER_RTT_printf(0, "[DBG] chan_ctrl computed=0x%08X\n", chan_ctrl);
     dw1000_write32(DW_REG_CHAN_CTRL, chan_ctrl);
+
+    // --- Non-standard SFD length for 110kbps ---
+    uint8_t sfd_len = 64;
+    dw1000_write_subreg(DW_REG_USR_SFD, DW_SUBREG_SFD_LENGTH, &sfd_len, 1);
 
     // --- TX_FCTRL: preamble length + PRF + datarate ---
     uint8_t buf[5];
