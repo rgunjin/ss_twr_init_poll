@@ -118,6 +118,9 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     // --- Non-standard SFD length for 110kbps ---
     uint8_t sfd_len = 64;
     dw1000_write_subreg(DW_REG_USR_SFD, DW_SUBREG_SFD_LENGTH, &sfd_len, 1);
+    uint8_t sfd_verify = 0;
+    dw1000_read_subreg(DW_REG_USR_SFD, DW_SUBREG_SFD_LENGTH, &sfd_verify, 1);
+    SEGGER_RTT_printf(0, "[DBG] USR_SFD length=0x%02X\n", sfd_verify);
 
     // --- TX_FCTRL: preamble length + PRF + datarate ---
     uint8_t buf[5];
