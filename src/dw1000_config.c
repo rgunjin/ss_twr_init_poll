@@ -105,6 +105,9 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     uint32_t chan_ctrl =
         ((uint32_t)CFG_CHAN    << 0)  |
         ((uint32_t)CFG_CHAN    << 4)  |
+        CHAN_CTRL_DWSFD               |
+        CHAN_CTRL_TNSSFD              |
+        CHAN_CTRL_RNSSFD              |
         ((uint32_t)CFG_PRF_VAL << 18) |
         ((uint32_t)CFG_TX_CODE << 22) |
         ((uint32_t)CFG_RX_CODE << 27);

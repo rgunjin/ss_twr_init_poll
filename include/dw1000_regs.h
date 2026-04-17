@@ -91,6 +91,9 @@
 #define DW_SUBREG_AON_CFG0      0x06    // AON config 0
 #define DW_SUBREG_AON_CFG1      0x0A    // AON config 1
 
+// USR_SFD (0x21)
+#define DW_SUBREG_SFD_LENGTH    0x00    // Non-standard SFD length
+
 // OTP_IF (0x2D)
 #define DW_SUBREG_OTP_WDAT      0x00    // OTP write data
 #define DW_SUBREG_OTP_ADDR      0x04    // OTP address to read
