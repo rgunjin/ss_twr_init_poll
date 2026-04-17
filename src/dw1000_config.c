@@ -20,10 +20,10 @@
 
 // DRX - digital recieve tuning
 // PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
-#define CFG_DRX_TUNE0b      0x0001          // 6.8Mbps, standard SFD
-#define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
+#define CFG_DRX_TUNE0b      0x000A          // was 6.8Mbps, standard SFD, now 110kbps
+#define CFG_DRX_TUNE1a      0x0064          // PRF 64MHz
 #define CFG_DRX_TUNE1b      0x0020          // preamble > 64 symbols, 6.8Mbps
-#define CFG_DRX_TUNE2       0x313B006BUL    // PRF 64MHz, PAC8
+#define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
 #define CFG_DRX_TUNE4H      0x0028          // preamble >= 128 symbols
 
 // AGC — automatic gain control
@@ -36,7 +36,7 @@
 #define CFG_LDE_REPC        0x28F4          // preamble code 9
 
 // SFD timeout: preamble(128) + SFD(8) + 1 = 137
-#define CFG_SFD_TO          1000
+#define CFG_SFD_TO          137 
 
 // CHAN_CTRL fields
 #define CFG_CHAN            5
@@ -63,7 +63,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
 
     // Disable double RX buffer - siplifies buffer managment
     uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
-    sys_cfg |= SYS_CFG_DIS_DRXB;
+    sys_cfg |= SYS_CFG_DIS_DRXB | SYS_CFG_RXM110K;
     dw1000_write32(DW_REG_SYS_CFG, sys_cfg);
 
     // --- Frequency synthesiser (PLL) ---
@@ -132,7 +132,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     fctrl &= ~(0x3UL << 13);
     fctrl |= ((uint32_t)DW_PRF_64M  << 16);
     fctrl |= ((uint32_t)DW_PLEN_128 << 18);
-    fctrl |= ((uint32_t)DW_BR_6M8   << 13);
+    fctrl |= ((uint32_t)DW_BR_110K   << 13);
     buf[0] = (uint8_t)(fctrl);
     buf[1] = (uint8_t)(fctrl >> 8);
     buf[2] = (uint8_t)(fctrl >> 16);
