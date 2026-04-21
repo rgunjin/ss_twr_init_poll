@@ -126,6 +126,11 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE4H, (uint8_t *)&tune4h, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_SFDTOC, (uint8_t *)&sfdto,  2);
 
+    // Проверка
+    uint16_t sfdtoc_verify = 0;
+    dw1000_read_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_SFDTOC, (uint8_t *)&sfdtoc_verify, 2);
+    SEGGER_RTT_printf(0, "[DBG] SFDTOC=0x%04X (%d)\n", sfdtoc_verify, sfdtoc_verify);
+
     // --- AGC ---
     uint16_t agc1 = CFG_AGC_TUNE1;
     uint32_t agc2 = CFG_AGC_TUNE2;
