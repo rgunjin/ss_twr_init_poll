@@ -147,7 +147,9 @@ int main(void) {
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
             dw1000_rx_reset();
             dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
-        } 
+        } else if (status & SYS_STATUS_RXPRD) {
+            SEGGER_RTT_printf(0, "[RX] preamble!\n");
+        }
     }
 }
 
