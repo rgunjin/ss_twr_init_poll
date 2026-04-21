@@ -33,7 +33,7 @@
 // LDE — leading edge detection algorithm
 #define CFG_LDE_CFG1        0x6D            // NTM=13, PMULT=3 (same for all PRF)
 #define CFG_LDE_CFG2        0x0607          // PRF 64MHz
-#define CFG_LDE_REPC        0x28F4          // preamble code 9
+#define CFG_LDE_REPC        0x051E          // 0x28F4 >> 3, for 110kbps
 
 // SFD timeout: preamble(128) + SFD(8) + 1 = 137
 #define CFG_SFD_TO          0xFFFF
