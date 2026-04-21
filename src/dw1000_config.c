@@ -150,11 +150,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
                       verify[4], verify[3], verify[2], verify[1], verify[0]);
 
     // --- SFD workaround ---
-    // Две ОТДЕЛЬНЫЕ записи - сначала TXSTRT, потом TRXOFF
-    // Это сбрасывает SFD состояние внутри чипа
-    uint8_t ctrl;
-    ctrl = (uint8_t)SYS_CTRL_TXSTRT;
-    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
-    ctrl = (uint8_t)SYS_CTRL_TRXOFF;
+    // Одна запись, две записи не работают
+    uint8_t ctrl = (uint8_t)(SYS_CTRL_TXSTRT | SYS_CTRL_TRXOFF);
     dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
 }
