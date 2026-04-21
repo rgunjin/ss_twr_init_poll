@@ -158,6 +158,5 @@ int main(void) {
         }
 
         SEGGER_RTT_printf(0, "[TX] seq=%d status=0x%08X\n", seq, status);
-        delay(1000000);
     }
 }
