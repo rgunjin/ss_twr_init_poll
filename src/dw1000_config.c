@@ -153,25 +153,18 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     dw1000_write32(DW_REG_CHAN_CTRL, chan_ctrl);
 
     // --- TX_FCTRL: preamble length + PRF + datarate ---
-    uint8_t buf[5];
-    dw1000_read_reg(DW_REG_TX_FCTRL, buf, 5);
-    uint32_t fctrl = (uint32_t)buf[0]        |
-                     ((uint32_t)buf[1] << 8)  |
-                     ((uint32_t)buf[2] << 16) |
-                     ((uint32_t)buf[3] << 24);
+    uint32_t fctrl = 0;
+    fctrl |= ((uint32_t)DW_BR_6M8   << 13);
+    fctrl |= ((uint32_t)DW_PRF_64M  << 16);
+    fctrl |= ((uint32_t)DW_PLEN_128 << 18);
+    fctrl |= 0x0C;      // Минимальная длина фрейма по умолчанию
 
-    fctrl &= ~(0x3UL  << 13);   // datarate bits [14:13]
-    fctrl &= ~(0x3UL  << 16);   // PRF bits [17:16]
-    fctrl &= ~(0x3FUL << 18);   // preamble bits [23:18]
-
-    fctrl |= ((uint32_t)DW_BR_6M8    << 13);
-    fctrl |= ((uint32_t)DW_PRF_64M   << 16);
-    fctrl |= ((uint32_t)DW_PLEN_128  << 18);
-
+    uint8_t buf[5] = {0};
     buf[0] = (uint8_t)(fctrl);
     buf[1] = (uint8_t)(fctrl >> 8);
     buf[2] = (uint8_t)(fctrl >> 16);
     buf[3] = (uint8_t)(fctrl >> 24);
+    buf[0] = 0;
     dw1000_write_reg(DW_REG_TX_FCTRL, buf, 5);
 
     uint8_t verify[5];
