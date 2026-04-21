@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 // =============================================================================
+// =============================================================================
 // Register values for channel 5, PRF 64MHz, 6.8Mbps
 // All values taken directly from deca_regs.h / deca_params_init.c
 // =============================================================================
@@ -20,11 +21,11 @@
 
 // DRX - digital recieve tuning
 // PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
-#define CFG_DRX_TUNE0b      0x0016          // 110kbps, non-standard SFD
+#define CFG_DRX_TUNE0b      0x000A          // 6.8Mbps, standard SFD
 #define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
-#define CFG_DRX_TUNE1b      0x0064          // preamble > 64 symbols, 6.8Mbps
+#define CFG_DRX_TUNE1b      0x0020          // preamble 128, 6.8Mbps
 #define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
-#define CFG_DRX_TUNE4H      0x0010          // preamble >= 128 symbols
+#define CFG_DRX_TUNE4H      0x0028          // 128 symbols
 
 // AGC — automatic gain control
 #define CFG_AGC_TUNE1       0x889B          // PRF 64MHz
@@ -33,10 +34,49 @@
 // LDE — leading edge detection algorithm
 #define CFG_LDE_CFG1        0x6D            // NTM=13, PMULT=3 (same for all PRF)
 #define CFG_LDE_CFG2        0x0607          // PRF 64MHz
-#define CFG_LDE_REPC        0x051E          // 0x28F4 >> 3, for 110kbps
+#define CFG_LDE_REPC        0x28F4          // preamble code 8
 
 // SFD timeout: preamble(128) + SFD(8) + 1 = 137
-#define CFG_SFD_TO          0xFFFF
+#define CFG_SFD_TO          137 
+
+// CHAN_CTRL fields
+#define CFG_CHAN            5
+#define CFG_PRF_VAL         2               // DW_PRF_64M = 2, goes into RXPRF bits
+#define CFG_TX_CODE         9
+#define CFG_RX_CODE         9
+
+// Register values for channel 5, PRF 64MHz, 6.8Mbps
+// All values taken directly from deca_regs.h / deca_params_init.c
+// =============================================================================
+
+// FS_CTRL - frequency synthesiser
+#define CFG_FS_PLLCFG       0x0800041DUL    // CH5
+#define CFG_FS_PLLTUNE      0xBE            // CH5
+
+// RF blocks
+#define CFG_RF_RXCTRLH      0xD8            // narrow bandwidth (CH5)
+#define CFG_RF_TXCTRL       0x001E3FE0UL    // CH5
+#define CFG_TC_PGDELAY      0xC0            // CH5 pulse generator delay
+
+// DRX - digital recieve tuning
+// PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
+#define CFG_DRX_TUNE0b      0x000A          // 6.8Mbps, standard SFD
+#define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
+#define CFG_DRX_TUNE1b      0x0020          // preamble 128, 6.8Mbps
+#define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
+#define CFG_DRX_TUNE4H      0x0028          // 128 symbols
+
+// AGC — automatic gain control
+#define CFG_AGC_TUNE1       0x889B          // PRF 64MHz
+#define CFG_AGC_TUNE2       0x2502A907UL    // fixed value, same for all configs
+
+// LDE — leading edge detection algorithm
+#define CFG_LDE_CFG1        0x6D            // NTM=13, PMULT=3 (same for all PRF)
+#define CFG_LDE_CFG2        0x0607          // PRF 64MHz
+#define CFG_LDE_REPC        0x28F4          // preamble code 8
+
+// SFD timeout: preamble(128) + SFD(8) + 1 = 137
+#define CFG_SFD_TO          137 
 
 // CHAN_CTRL fields
 #define CFG_CHAN            5
@@ -55,7 +95,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
 
     // Disable double RX buffer - siplifies buffer managment
     uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
-    sys_cfg |= SYS_CFG_DIS_DRXB | SYS_CFG_RXM110K;
+    sys_cfg |= SYS_CFG_DIS_DRXB;
     dw1000_write32(DW_REG_SYS_CFG, sys_cfg);
 
     // --- Frequency synthesiser (PLL) ---
@@ -104,9 +144,6 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     uint32_t chan_ctrl =
         ((uint32_t)CFG_CHAN    << 0)  |
         ((uint32_t)CFG_CHAN    << 4)  |
-        CHAN_CTRL_DWSFD               |
-        CHAN_CTRL_TNSSFD              |
-        CHAN_CTRL_RNSSFD              |
         ((uint32_t)CFG_PRF_VAL << 18) |
         ((uint32_t)CFG_TX_CODE << 22) |
         ((uint32_t)CFG_RX_CODE << 27);
@@ -114,13 +151,6 @@ void dw1000_configure(const dw1000_config_t *cfg) {
                   CFG_CHAN, CFG_PRF_VAL, CFG_TX_CODE, CFG_RX_CODE);
     SEGGER_RTT_printf(0, "[DBG] chan_ctrl computed=0x%08X\n", chan_ctrl);
     dw1000_write32(DW_REG_CHAN_CTRL, chan_ctrl);
-
-    // --- Non-standard SFD length for 110kbps ---
-    uint8_t sfd_len = 64;
-    dw1000_write_subreg(DW_REG_USR_SFD, DW_SUBREG_SFD_LENGTH, &sfd_len, 1);
-    uint8_t sfd_verify = 0;
-    dw1000_read_subreg(DW_REG_USR_SFD, DW_SUBREG_SFD_LENGTH, &sfd_verify, 1);
-    SEGGER_RTT_printf(0, "[DBG] USR_SFD length=0x%02X\n", sfd_verify);
 
     // --- TX_FCTRL: preamble length + PRF + datarate ---
     uint8_t buf[5];
@@ -134,9 +164,9 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     fctrl &= ~(0x3UL  << 16);   // PRF bits [17:16]
     fctrl &= ~(0x3FUL << 18);   // preamble bits [23:18]
 
-    fctrl |= ((uint32_t)DW_BR_110K   << 13);
+    fctrl |= ((uint32_t)DW_BR_6M8    << 13);
     fctrl |= ((uint32_t)DW_PRF_64M   << 16);
-    fctrl |= ((uint32_t)DW_PLEN_1024 << 18);
+    fctrl |= ((uint32_t)DW_PLEN_128  << 18);
 
     buf[0] = (uint8_t)(fctrl);
     buf[1] = (uint8_t)(fctrl >> 8);
