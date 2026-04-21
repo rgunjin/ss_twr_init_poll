@@ -154,17 +154,16 @@ void dw1000_configure(const dw1000_config_t *cfg) {
 
     // --- TX_FCTRL: preamble length + PRF + datarate ---
     uint32_t fctrl = 0;
+    fctrl |= 0x0C;      // Минимальная длина фрейма по умолчанию
     fctrl |= ((uint32_t)DW_BR_6M8   << 13);
     fctrl |= ((uint32_t)DW_PRF_64M  << 16);
     fctrl |= ((uint32_t)DW_PLEN_128 << 18);
-    fctrl |= 0x0C;      // Минимальная длина фрейма по умолчанию
 
     uint8_t buf[5] = {0};
     buf[0] = (uint8_t)(fctrl);
     buf[1] = (uint8_t)(fctrl >> 8);
     buf[2] = (uint8_t)(fctrl >> 16);
     buf[3] = (uint8_t)(fctrl >> 24);
-    buf[0] = 0;
     dw1000_write_reg(DW_REG_TX_FCTRL, buf, 5);
 
     uint8_t verify[5];
