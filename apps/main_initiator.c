@@ -140,14 +140,18 @@ int main(void) {
     uint8_t seq = 0;
     while (1) {
         tx_poll_msg[ALL_MSG_SN_IDX] = seq++;
-
         dw1000_clear_sys_status(SYS_STATUS_TXFRS | SYS_STATUS_TXFRB |
-                                SYS_STATUS_TXPRS | SYS_STATUS_TXPHS);
-
+                            SYS_STATUS_TXPRS | SYS_STATUS_TXPHS);
         dw1000_write_tx_data(tx_poll_msg, sizeof(tx_poll_msg), 0);
         dw1000_write_tx_fctrl(sizeof(tx_poll_msg), 0, 1);
-        dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TXSTRT);
 
+        // лог после write_tx_fctrl
+        uint8_t fctrl_dbg[5];
+        dw1000_read_reg(DW_REG_TX_FCTRL, fctrl_dbg, 5);
+        SEGGER_RTT_printf(0, "[TX] fctrl=0x%02X%02X%02X%02X\n",
+        fctrl_dbg[3], fctrl_dbg[2], fctrl_dbg[1], fctrl_dbg[0]);
+
+        dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TXSTRT);
         uint32_t status;
         uint32_t timeout = 1000000;
         while (!((status = dw1000_read_sys_status()) & SYS_STATUS_TXFRS)) {
@@ -156,7 +160,7 @@ int main(void) {
                 break;
             }
         }
-
         SEGGER_RTT_printf(0, "[TX] seq=%d status=0x%08X\n", seq, status);
+        delay(500000);  // задержка внутри цикла
     }
 }
