@@ -144,8 +144,8 @@ int main(void) {
             if (status & SYS_STATUS_RXRFTO)  SEGGER_RTT_printf(0, "  -> RXRFTO\n");
             if (status & SYS_STATUS_LDEERR)  SEGGER_RTT_printf(0, "  -> LDEERR\n");
             if (status & SYS_STATUS_RXSFDTO) SEGGER_RTT_printf(0, "  -> RXSFDTO\n");
+            dw1000_trxoff();
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
-            dw1000_rx_reset();
             dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
         } else if (status & SYS_STATUS_RXPRD) {
             SEGGER_RTT_printf(0, "[RX] preamble!\n");
