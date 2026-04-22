@@ -35,8 +35,12 @@
 #define CFG_LDE_CFG2        0x0607          // PRF 64MHz
 #define CFG_LDE_REPC        0x3335          // preamble code 9, PRF 64MHz
 
-// SFD timeout: preamble(128) + SFD(8) + 1 = 137
-#define CFG_SFD_TO          137 
+// SFD timeout: 0x1041 = DWT_SFDTOC_DEF (default from DecaWave)
+// 0 = disabled (no timeout, waits forever)
+// formula: preamble_length + 1 + SFD_length - PAC_size
+// for preamble 128, standard SFD (8), PAC8: 128 + 1 + 8 - 8 = 129 (0x81)
+// DWT_SFDTOC_DEF (0x1041) is much larger and more robust
+#define CFG_SFD_TO   0x1041
 
 // CHAN_CTRL fields
 #define CFG_CHAN            5
