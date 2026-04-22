@@ -56,8 +56,12 @@ void dw1000_configure(const dw1000_config_t *cfg) {
 
     // Disable double RX buffer - siplifies buffer managment
     uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
-    sys_cfg |= SYS_CFG_DIS_DRXB;
+    sys_cfg |= SYS_CFG_DIS_DRXB;    // Отключаем двойной буфер
+    sys_cfg &= ~SYS_CFG_RXM110K;    // убираем 110К режим - используем 6.8Mbps
     dw1000_write32(DW_REG_SYS_CFG, sys_cfg);
+
+    SEGGER_RTT_printf(0, "[CFG] SYS_CFG=0x%08X (expect no bit13)\n",
+                      dw1000_read32(DW_REG_SYS_CFG));
 
     // --- Frequency synthesiser (PLL) ---
     uint32_t pllcfg  = CFG_FS_PLLCFG;

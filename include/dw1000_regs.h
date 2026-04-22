@@ -245,30 +245,30 @@
 // SYS_CFG register bits (0x04)
 // =============================================================================
 
-#define SYS_CFG_FFE             (1UL << 0)  // Frame filter enable
-#define SYS_CFG_FFBC            (1UL << 1)  // Accept beacon frames
-#define SYS_CFG_FFBD            (1UL << 2)  // Accept data frames
-#define SYS_CFG_FFAB            (1UL << 3)  // Accept ACK frames
-#define SYS_CFG_FFAD            (1UL << 4)  // Accept MAC command frames
-#define SYS_CFG_FFAA            (1UL << 5)  // Accept all address frames
-#define SYS_CFG_FFAM            (1UL << 6)  // Accept multi-cast frames
-#define SYS_CFG_FFAR            (1UL << 7)  // Accept reserved frames
-#define SYS_CFG_FFA4            (1UL << 8)  // Accept type 4 frames
-#define SYS_CFG_FFA5            (1UL << 9)  // Accept type 5 frames
-#define SYS_CFG_HIRQ_POL        (1UL << 10) // IRQ polarity (1=active high)
-#define SYS_CFG_SPI_EDGE        (1UL << 11) // SPI data edge
-#define SYS_CFG_DIS_FCE         (1UL << 12) // Disable frame check error handling
-#define SYS_CFG_DIS_DRXB        (1UL << 13) // Disable double RX buffer
-#define SYS_CFG_DIS_PHE         (1UL << 14) // Disable PHR error handling
-#define SYS_CFG_DIS_RSDE        (1UL << 15) // Disable Reed Solomon error handling
-#define SYS_CFG_FCS_INIT2F      (1UL << 16) // FCS seed
-#define SYS_CFG_PHR_MODE_MASK   (0x3UL << 17) // PHR mode bits
-#define SYS_CFG_DIS_STXP        (1UL << 18) // Disable smart TX power
-#define SYS_CFG_RXM110K         (1UL << 22) // RX at 110 kbps (long preamble)
-#define SYS_CFG_RXWTOE          (1UL << 28) // RX wait timeout enable
-#define SYS_CFG_RXAUTR          (1UL << 29) // RX auto re-enable after timeout
-#define SYS_CFG_AUTOACK         (1UL << 30) // Auto ACK enable
-#define SYS_CFG_AACKPEND        (1UL << 31) // Auto ACK pending bit
+#define SYS_CFG_FFE             (1UL << 0)   // Frame filter enable
+#define SYS_CFG_FFBC            (1UL << 1)   // Accept beacon frames
+#define SYS_CFG_FFBD            (1UL << 2)   // Accept data frames
+#define SYS_CFG_FFAB            (1UL << 3)   // Accept ACK frames
+#define SYS_CFG_FFAD            (1UL << 4)   // Accept MAC command frames
+#define SYS_CFG_FFAA            (1UL << 5)   // Accept all address frames
+#define SYS_CFG_FFAM            (1UL << 6)   // Accept multi-cast frames
+#define SYS_CFG_FFAR            (1UL << 7)   // Accept reserved frames
+#define SYS_CFG_FFA4            (1UL << 8)   // Accept type 4 frames
+#define SYS_CFG_FFA5            (1UL << 9)   // Accept type 5 frames
+#define SYS_CFG_HIRQ_POL        (1UL << 8)   // IRQ polarity (1=active high)
+#define SYS_CFG_SPI_EDGE        (1UL << 9)   // SPI data edge
+#define SYS_CFG_DIS_FCE         (1UL << 10)  // Disable frame check error handling
+#define SYS_CFG_DIS_DRXB        (1UL << 12)  // Disable double RX buffer
+#define SYS_CFG_DIS_PHE         (1UL << 13)  // Disable PHR error handling
+#define SYS_CFG_DIS_RSDE        (1UL << 14)  // Disable Reed Solomon error handling
+#define SYS_CFG_FCS_INIT2F      (1UL << 15)  // FCS seed
+#define SYS_CFG_PHR_MODE_MASK   (0x3UL << 16) // PHR mode bits
+#define SYS_CFG_DIS_STXP        (1UL << 18)  // Disable smart TX power
+#define SYS_CFG_RXM110K         (1UL << 22)  // RX at 110 kbps (long preamble)
+#define SYS_CFG_RXWTOE          (1UL << 28)  // RX wait timeout enable
+#define SYS_CFG_RXAUTR          (1UL << 29)  // RX auto re-enable after timeout
+#define SYS_CFG_AUTOACK         (1UL << 30)  // Auto ACK enable
+#define SYS_CFG_AACKPEND        (1UL << 31)  // Auto ACK pending bit
 
 // =============================================================================
 // CHAN_CTRL register bits (0x1F)
