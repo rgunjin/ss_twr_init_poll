@@ -147,4 +147,30 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     // Одна запись, две записи не работают
     uint8_t ctrl = (uint8_t)(SYS_CTRL_TXSTRT | SYS_CTRL_TRXOFF);
     dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
+
+    // ===== ВЕРИФИКАЦИЯ ВСЕХ РЕГИСТРОВ =====
+    uint16_t t0b, t1a, t1b, t4h, sfdto;
+    uint32_t t2;
+    dw1000_read_subreg(DW_REG_DRX_CONF, 0x02, (uint8_t*)&t0b,   2);
+    dw1000_read_subreg(DW_REG_DRX_CONF, 0x04, (uint8_t*)&t1a,   2);
+    dw1000_read_subreg(DW_REG_DRX_CONF, 0x06, (uint8_t*)&t1b,   2);
+    dw1000_read_subreg(DW_REG_DRX_CONF, 0x08, (uint8_t*)&t2,    4);
+    dw1000_read_subreg(DW_REG_DRX_CONF, 0x20, (uint8_t*)&sfdto, 2);
+    dw1000_read_subreg(DW_REG_DRX_CONF, 0x26, (uint8_t*)&t4h,   2);
+    SEGGER_RTT_printf(0, "[DRX] TUNE0B=0x%04X (exp 0x000A)\n", t0b);
+    SEGGER_RTT_printf(0, "[DRX] TUNE1A=0x%04X (exp 0x008D)\n", t1a);
+    SEGGER_RTT_printf(0, "[DRX] TUNE1B=0x%04X (exp 0x0010)\n", t1b);
+    SEGGER_RTT_printf(0, "[DRX] TUNE2 =0x%08X (exp 0x372A011B)\n", t2);
+    SEGGER_RTT_printf(0, "[DRX] SFDTOC=0x%04X (exp 0x0089)\n", sfdto);
+    SEGGER_RTT_printf(0, "[DRX] TUNE4H=0x%04X (exp 0x0028)\n", t4h);
+
+    uint32_t chan = dw1000_read32(DW_REG_CHAN_CTRL);
+    SEGGER_RTT_printf(0, "[CFG] CHAN_CTRL=0x%08X (exp 0x4A480055)\n", chan);
+
+    uint16_t agc1_v;
+    uint32_t agc2_v;
+    dw1000_read_subreg(DW_REG_AGC_CTRL, DW_SUBREG_AGC_TUNE1, (uint8_t*)&agc1_v, 2);
+    dw1000_read_subreg(DW_REG_AGC_CTRL, DW_SUBREG_AGC_TUNE2, (uint8_t*)&agc2_v, 4);
+    SEGGER_RTT_printf(0, "[AGC] TUNE1=0x%04X (exp 0x889B)\n", agc1_v);
+    SEGGER_RTT_printf(0, "[AGC] TUNE2=0x%08X (exp 0x2502A907)\n", agc2_v);
 }
