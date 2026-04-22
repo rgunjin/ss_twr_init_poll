@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 // =============================================================================
-// =============================================================================
 // Register values for channel 5, PRF 64MHz, 6.8Mbps
 // All values taken directly from deca_regs.h / deca_params_init.c
 // =============================================================================
@@ -34,7 +33,7 @@
 // LDE — leading edge detection algorithm
 #define CFG_LDE_CFG1        0x6D            // NTM=13, PMULT=3 (same for all PRF)
 #define CFG_LDE_CFG2        0x0607          // PRF 64MHz
-#define CFG_LDE_REPC        0x28F4          // preamble code 8
+#define CFG_LDE_REPC        0x3335          // preamble code 9, PRF 64MHz
 
 // SFD timeout: preamble(128) + SFD(8) + 1 = 137
 #define CFG_SFD_TO          137 
@@ -45,44 +44,6 @@
 #define CFG_TX_CODE         9
 #define CFG_RX_CODE         9
 
-// Register values for channel 5, PRF 64MHz, 6.8Mbps
-// All values taken directly from deca_regs.h / deca_params_init.c
-// =============================================================================
-
-// FS_CTRL - frequency synthesiser
-#define CFG_FS_PLLCFG       0x0800041DUL    // CH5
-#define CFG_FS_PLLTUNE      0xBE            // CH5
-
-// RF blocks
-#define CFG_RF_RXCTRLH      0xD8            // narrow bandwidth (CH5)
-#define CFG_RF_TXCTRL       0x001E3FE0UL    // CH5
-#define CFG_TC_PGDELAY      0xC0            // CH5 pulse generator delay
-
-// DRX - digital recieve tuning
-// PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
-#define CFG_DRX_TUNE0b      0x000A          // 6.8Mbps, standard SFD
-#define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
-#define CFG_DRX_TUNE1b      0x0020          // preamble 128, 6.8Mbps
-#define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
-#define CFG_DRX_TUNE4H      0x0028          // 128 symbols
-
-// AGC — automatic gain control
-#define CFG_AGC_TUNE1       0x889B          // PRF 64MHz
-#define CFG_AGC_TUNE2       0x2502A907UL    // fixed value, same for all configs
-
-// LDE — leading edge detection algorithm
-#define CFG_LDE_CFG1        0x6D            // NTM=13, PMULT=3 (same for all PRF)
-#define CFG_LDE_CFG2        0x0607          // PRF 64MHz
-#define CFG_LDE_REPC        0x28F4          // preamble code 8
-
-// SFD timeout: preamble(128) + SFD(8) + 1 = 137
-#define CFG_SFD_TO          137 
-
-// CHAN_CTRL fields
-#define CFG_CHAN            5
-#define CFG_PRF_VAL         2               // DW_PRF_64M = 2, goes into RXPRF bits
-#define CFG_TX_CODE         9
-#define CFG_RX_CODE         9
 
 // =============================================================================
 // dw1000_configure — write all radio config registers
@@ -166,9 +127,9 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     // --- TX_FCTRL: preamble length + PRF + datarate ---
     uint32_t fctrl = 0;
     fctrl |= 0x0C;      // Минимальная длина фрейма по умолчанию
-    fctrl |= ((uint32_t)DW_BR_6M8   << 13);
-    fctrl |= ((uint32_t)DW_PRF_64M  << 16);
-    fctrl |= ((uint32_t)DW_PLEN_128 << 18);
+    fctrl |= ((uint32_t)(DW_PLEN_128 | DW_PRF_64M) << 16); // DW_PLEN_128=0x14, DW_PRF_64M=0x02
+    fctrl |= ((uint32_t)DW_BR_6M8 << 13);
+    // Результат должен быть 0x00124000 + 0x0C = 0x0012400C
 
     uint8_t buf[5] = {0};
     buf[0] = (uint8_t)(fctrl);
