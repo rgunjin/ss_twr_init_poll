@@ -125,9 +125,12 @@ static void enableclocks_xti(void) {
 // enableclocks_seq — return clocks to normal sequenced mode (ENABLE_ALL_SEQ)
 // Called after OTP read and LDE load are complete
 static void enableclocks_seq(void) {
-    uint8_t zero = 0x00;
-    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0,     &zero, 1);
-    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0 + 1, &zero, 1);
+    uint8_t reg[2];
+    dw1000_read_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0, reg, 2);
+    reg[0] = 0x00;
+    reg[1] = reg[1] & 0xFE;
+    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0,     &reg[0], 1);
+    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL0 + 1, &reg[1], 1);
 }
 
 // enableclocks_lde - force clocks for LDE microcode load (FORCE_LDE)

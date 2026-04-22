@@ -122,6 +122,12 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE0B, (uint8_t *)&tune0b, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1A, (uint8_t *)&tune1a, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1B, (uint8_t *)&tune1b, 2);
+
+    // Debug:
+    uint16_t verify_tune1b = 0;
+    dw1000_read_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1B, (uint8_t*)&verify_tune1b, 2);
+    SEGGER_RTT_printf(0, "[DBG] DRX_TUNE1B=0x%04X (expect 0x0010)\n", verify_tune1b);
+
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE2,  (uint8_t *)&tune2,  4);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE4H, (uint8_t *)&tune4h, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_SFDTOC, (uint8_t *)&sfdto,  2);
