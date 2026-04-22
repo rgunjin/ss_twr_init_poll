@@ -40,7 +40,7 @@
 // formula: preamble_length + 1 + SFD_length - PAC_size
 // for preamble 128, standard SFD (8), PAC8: 128 + 1 + 8 - 8 = 129 (0x81)
 // DWT_SFDTOC_DEF (0x1041) is much larger and more robust
-#define CFG_SFD_TO   0x1041
+#define CFG_SFD_TO          0
 
 // CHAN_CTRL fields
 #define CFG_CHAN            5
@@ -100,6 +100,11 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE2,  (uint8_t *)&tune2,  4);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE4H, (uint8_t *)&tune4h, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_SFDTOC, (uint8_t *)&sfdto,  2);
+
+    // Preamble detect timeout = 0 (disabled)
+    // Without this, chip generates RXSFDTO from noise preamble detections
+    uint16_t pretoc = 0;
+    dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_PRETOC, (uint8_t*)&pretoc, 2);
 
     // Проверка
     uint16_t sfdtoc_verify = 0;

@@ -71,6 +71,7 @@
 #define DW_SUBREG_DRX_TUNE1B    0x06    // DRX tune 1b
 #define DW_SUBREG_DRX_TUNE2     0x08    // PAC dependent
 #define DW_SUBREG_DRX_SFDTOC    0x20    // SFD detection timeout (symbols) 
+#define DW_SUBREG_DRX_PRETOC    0x24    // Preamble detect timeout
 #define DW_SUBREG_DRX_TUNE4H    0x26    // DRX tune 4H
 
 // RF_CONF (0x28)

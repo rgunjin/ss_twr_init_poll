@@ -130,15 +130,25 @@ int main(void) {
                       dw1000_read32(DW_REG_SYS_STATE));
 
     while (1) {
+        static uint32_t loop_counter = 0;
+        static uint32_t err_counter = 0;
+        loop_counter++;
+        
         uint32_t status = dw1000_read_sys_status();
 
         if (status & SYS_STATUS_RXFCG) {
-            SEGGER_RTT_printf(0, "[RX] got frame! status=0x%08X\n", status);
+            SEGGER_RTT_printf(0, "[RX] got frame! loops=%d errors=%d\n",
+                            loop_counter, err_counter);
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
             dw1000_rx_reset();
             dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
 
         } else if (status & SYS_STATUS_ALL_RX_TO) {
+            err_counter++;
+            if (err_counter % 10 == 0) {
+                SEGGER_RTT_printf(0, "[RX] %d errors, %d loops\n", 
+                              err_counter, loop_counter);
+            }
             SEGGER_RTT_printf(0, "[RX] timeout status=0x%08X\n", status);
             dw1000_trxoff();
             dw1000_rx_reset();

@@ -160,6 +160,14 @@ int main(void) {
             }
         }
         SEGGER_RTT_printf(0, "[TX] seq=%d status=0x%08X\n", seq, status);
+
+        // Читаем все 5 байт статуса
+        uint8_t full_status[5];
+        dw1000_read_reg(DW_REG_SYS_STATUS, full_status, 5);
+        SEGGER_RTT_printf(0, "[TX] full=0x%02X%02X%02X%02X%02X\n",
+                                full_status[4], full_status[3], full_status[2],
+                                full_status[1], full_status[0]);
+
         delay(500000);  // задержка внутри цикла
     }
 }
