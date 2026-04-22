@@ -1,4 +1,3 @@
-#include <string.h>
 #include <stdint.h>
 #include "nrf52_addresses.h"
 #include "nrf52_peripherals.h"
