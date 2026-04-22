@@ -23,7 +23,7 @@
 // PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
 #define CFG_DRX_TUNE0b      0x000A          // 6.8Mbps, standard SFD
 #define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
-#define CFG_DRX_TUNE1b      0x0020          // preamble 128, 6.8Mbps
+#define CFG_DRX_TUNE1b      0x0010          // preamble 128, 6.8Mbps
 #define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
 #define CFG_DRX_TUNE4H      0x0028          // 128 symbols
 
