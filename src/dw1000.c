@@ -289,6 +289,13 @@ int dw1000_init(void) {
     // 10. Return clock to normal sequenced mode
     enableclocks_seq();
 
+    // Дать PLL стабилизироваться
+    dw_delay(500000);
+
+    // Очистить CLKPLL_LL (бит 23) - он взводится во время переключений клока
+    // это нормально, но должен быть очищен до начала RX
+    dw1000_clear_sys_status(0x00800000);
+
     SEGGER_RTT_printf(0, "[INIT] step 5 after enableclocks_seq: status=0x%08X\n",
                       dw1000_read_sys_status());
 
@@ -334,6 +341,9 @@ int dw1000_init(void) {
 
     SEGGER_RTT_printf(0, "[INIT] step 7 after AON: status=0x%08X\n",
                       dw1000_read_sys_status());
+
+    // Финальная очистка статуса - убираем все флаги накопившиеся при init
+    dw1000_clear_sys_status(0xFFFFFFFF);
 
     // 12. Final sanity check - verify chip still responds after init
     if (dw1000_read_dev_id() != DW1000_DEV_ID) {
