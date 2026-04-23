@@ -197,15 +197,18 @@ static void dw1000_softreset(void) {
     uint16_t ctrl1 = 0x0300;
     dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&ctrl1, 2);
 
-    // 3. Минимальный сброс AON array
-    //    Сначала сбрасываем, командой 0x00, затем сохраняем 0x02
-    //    Это записывает текущие (нулевые) регистры в AON array
-    //    чтобы при следующем wake-up не восстановился старый конфиг
+    // 3a. Очистка AON конфигурации
+    uint16_t aon_wcfg = 0x0000;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
+    uint8_t aon_cfg0 = 0x00;
+    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
+
+    // 3b. Upload нулей в AON array
     uint8_t aon_ctrl = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
     aon_ctrl = 0x02;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    
+
     // 4. Сброс всех блоков: HIF, TX, RX, PMSC
     //    Пишим 0x00 в байт 3 регистра PMSC_CTRL0 (sub-offset 0x03)
     uint8_t reset = 0x00;
@@ -221,13 +224,6 @@ static void dw1000_softreset(void) {
 
 
 int dw1000_init(void) {
-    SEGGER_RTT_printf(0, "[INIT] step 0: status=0x%08X\n",
-                      dw1000_read_sys_status());
-    // 0, Force TRXOFF - вывести из любого активного состояния
-    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TRXOFF);
-    dw_delay(10000);
-    dw1000_clear_sys_status(0xFFFFFFFF);
-
     SEGGER_RTT_printf(0, "[INIT] step 1 after clear: status=0x%08X\n",
                       dw1000_read_sys_status());
 
@@ -239,21 +235,18 @@ int dw1000_init(void) {
     // 2. Soft reset to put chip in know state
     dw1000_softreset();
 
-    // 3. Small delay after reset - DW1000-datasheet recommends at least 10us.
-    // At 64MHz, 1000 iterations ~ 16us
-    dw_delay(100000);
 
     SEGGER_RTT_printf(0, "[INIT] step 2 after softreset: status=0x%08X\n",
                       dw1000_read_sys_status());
 
-    // 4. Switch system clock to XTAL - required before reading OTP
+    // 3. Switch system clock to XTAL - required before reading OTP
     enableclocks_xti();
 
-    // 5. Enable CPLL lock to detect on EXT_SYNC
+    // 4. Enable CPLL lock to detect on EXT_SYNC
     uint8_t ec_ctrl = DW_EC_CTRL_PLLLCK;
     dw1000_write_subreg(DW_REG_EXT_SYNC, DW_SUBREG_EC_CTRL, &ec_ctrl, 1);
 
-    // 6. Read XTAL trim from OTP (address 0x1E)
+    // 5. Read XTAL trim from OTP (address 0x1E)
     //    bits [4:0]  = trim value
     //    bits [15:8] = OTP revision number
     uint32_t otp_xtrim = otp_read(DW_OTP_ADDR_XTRIM);
@@ -263,7 +256,7 @@ int dw1000_init(void) {
         xtrim = DW_FS_XTALT_MIDRANGE;
     }
 
-    // 7. Read  LDO tune tune from OTP - kick it if a value is programmed
+    // 6. Read  LDO tune tune from OTP - kick it if a value is programmed
     //    LDO tune improves RF performance and measurement range
     uint32_t ldo_tune = otp_read(DW_OTP_ADDR_LDOTUNE);
     if ((ldo_tune & 0xFF) != 0) {
@@ -271,7 +264,7 @@ int dw1000_init(void) {
         dw1000_write_subreg(DW_REG_OTP_IF, DW_SUBREG_OTP_SF, &sf, 1);
     }
 
-    // 8. Apply XTAL trim to FS_XTALT register
+    // 7. Apply XTAL trim to FS_XTALT register
     //    Bits [6:5] are reserved and must always be 1 — OR with 0x60
     uint8_t xtal = DW_FS_XTALT_RESERVED | (xtrim & DW_FS_XTALT_MASK);
     dw1000_write_subreg(DW_REG_FS_CTRL, DW_SUBREG_FS_XTALT, &xtal, 1);
@@ -279,77 +272,29 @@ int dw1000_init(void) {
     SEGGER_RTT_printf(0, "[INIT] step 3 before LDE: status=0x%08X\n",
                       dw1000_read_sys_status());
 
-    // 9. Load LDE microcode from ROM into chip RAM
+    // 8. Load LDE microcode from ROM into chip RAM
     //    This enables accurate RX timestamps required for ranging
     load_lde_microcode();
 
     SEGGER_RTT_printf(0, "[INIT] step 4 after LDE: status=0x%08X\n",
                       dw1000_read_sys_status());
 
-    // 10. Return clock to normal sequenced mode
+    // 9. Return clock to normal sequenced mode
     enableclocks_seq();
 
-    // Дать PLL стабилизироваться
-    dw_delay(500000);
-
-    // Очистить CLKPLL_LL (бит 23) - он взводится во время переключений клока
-    // это нормально, но должен быть очищен до начала RX
-    dw1000_clear_sys_status(0x00800000);
 
     SEGGER_RTT_printf(0, "[INIT] step 5 after enableclocks_seq: status=0x%08X\n",
                       dw1000_read_sys_status());
 
-    // 10a. Enable LDE algorithm - must be set after loading microcode
-    // Without this bit RX timestamp are garbage even if RX works
-    // PMSC_CTRL1 is at sub-address 0x04, 2 bytes
-    // LDERUN = bit 9 of the full 32-register = 9 bit of the 16-bit word
-    uint16_t pmsc_ctrl1 = 0;
-    dw1000_read_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&pmsc_ctrl1, 2);
-    pmsc_ctrl1 |= (1U << 9);        // LDERUN
-    dw1000_write_subreg(DW_REG_PMSC, DW_SUBREG_PMSC_CTRL1, (uint8_t *)&pmsc_ctrl1, 2);
 
-    SEGGER_RTT_printf(0, "[INIT] step 6 after LDERUN: status=0x%08X\n",
-                      dw1000_read_sys_status());
-
-    // 11. AON - запретить автоматический уход в sleep
-    // В этом примере sleep не используем, поэтому все занулили
-    // I) AON_WCFG = 0 - ничего не востанавливать при wake-up
-    uint16_t aon_wcfg = 0x0000;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_WCFG, (uint8_t *)&aon_wcfg, 2);
-
-    // II) AON_CFG0 = 0 - отключаем все триггеры засыпания
-    //      бит 0: SLEEP_EN - разрешить sleep (0 = запрещено)
-    //      бит 1: WAKE_PIN - wake по IRQ пину
-    //      бит 2: WAKE_SPI - wake по SPI CS
-    //      бит 3: WAKE_CNT - wake по таймеру
-    //      все в 0 = чип не спит никогда
-    uint8_t aon_cfg0 = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG0, &aon_cfg0, 1);
-
-    // III) AON_CFG1 = 0 - доп. настройки sleep, тоже зануляем
+    // 10. AON_CFG1 = 0 - доп. настройки sleep, тоже зануляем
     uint8_t aon_cfg1 = 0x00;
     dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CFG1, &aon_cfg1, 1);
 
-    // IV) Сохранить эту конфигурацию в AON массив
-    // Сначала пишем 0 (сброс команды), потом SAVE (0x02)
-    uint8_t aon_ctrl = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x02;        
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
-    aon_ctrl = 0x00;
-    dw1000_write_subreg(DW_REG_AON, DW_SUBREG_AON_CTRL, &aon_ctrl, 1);
 
     SEGGER_RTT_printf(0, "[INIT] step 7 after AON: status=0x%08X\n",
                       dw1000_read_sys_status());
 
-    // Финальная очистка статуса - убираем все флаги накопившиеся при init
-    dw1000_clear_sys_status(0xFFFFFFFF);
-
-    // 12. Final sanity check - verify chip still responds after init
-    if (dw1000_read_dev_id() != DW1000_DEV_ID) {
-        SEGGER_RTT_printf(0, "[INIT] DEV_ID check failed after init\n");
-        return DW_ERROR;
-    }
     return DW_SUCCESS;
 }
 
