@@ -150,7 +150,8 @@ int main(void) {
         SEGGER_RTT_printf(0, "[TX] fctrl=0x%02X%02X%02X%02X\n",
         fctrl_dbg[3], fctrl_dbg[2], fctrl_dbg[1], fctrl_dbg[0]);
 
-        dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_TXSTRT);
+        dw1000_start_tx(DW_TX_IMMEDIATE);
+
         uint32_t status;
         uint32_t timeout = 1000000;
         while (!((status = dw1000_read_sys_status()) & SYS_STATUS_TXFRS)) {
