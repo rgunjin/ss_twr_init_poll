@@ -133,7 +133,23 @@ int main(void) {
     // МИНИМАЛЬНЫЙ RX ТЕСТ
     // =========================================================
     dw1000_clear_sys_status(0xFFFFFFFF);        // Чистим статус
+
+    // RX_FWTO (0x0C) — frame wait timeout в ~1.026 мкс единицах
+    // 65000 = ~66ms, такое же значение как у Decawave
+    uint16_t fwto = 65000;
+    dw1000_write_subreg(DW_REG_RX_FWTO, 0x00, (uint8_t*)&fwto, 2);
+
+    // Включить timeout в SYS_CFG
+    uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
+    sys_cfg |= SYS_CFG_RXWTOE;
+    dw1000_write32(DW_REG_SYS_CFG, sys_cfg);
+
+    //Debug
+    SEGGER_RTT_printf(0, "[DBG] SYS_CFG after RXWTOE=0x%08X\n", 
+    dw1000_read32(DW_REG_SYS_CFG));
+
     dw1000_rx_enable();
+
     SEGGER_RTT_printf(0, "[RX] receiver enabled\n");
     SEGGER_RTT_printf(0, "[DBG] SYS_STATE=0x%08X\n",
                       dw1000_read32(DW_REG_SYS_STATE));
@@ -150,7 +166,7 @@ int main(void) {
                             loop_counter, err_counter);
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
             dw1000_rx_reset();
-            dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+            dw1000_rx_enable();
 
         } else if (status & SYS_STATUS_ALL_RX_TO) {
             err_counter++;
@@ -162,7 +178,7 @@ int main(void) {
             dw1000_trxoff();
             dw1000_rx_reset();
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_TO);
-            dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+            dw1000_rx_enable();
             
         } else if (status & SYS_STATUS_ALL_RX_ERR) {
             SEGGER_RTT_printf(0, "[RX] error status=0x%08X\n", status);
@@ -175,7 +191,7 @@ int main(void) {
             dw1000_trxoff();
             dw1000_rx_reset();
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
-            dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+            dw1000_rx_enable();
         } 
     }
 }

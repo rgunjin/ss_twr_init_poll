@@ -38,8 +38,8 @@
 // CHAN_CTRL fields
 #define CFG_CHAN            5
 #define CFG_PRF_VAL         2               // DW_PRF_64M = 2, goes into RXPRF bits
-#define CFG_TX_CODE         9
-#define CFG_RX_CODE         9
+#define CFG_TX_CODE         10
+#define CFG_RX_CODE         10
 
 
 // =============================================================================

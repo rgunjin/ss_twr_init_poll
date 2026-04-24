@@ -67,8 +67,8 @@ typedef struct {
     .prf           = DW_PRF_64M, \
     .txPreambLength= DW_PLEN_128,\
     .rxPAC         = DW_PAC8,    \
-    .txCode        = 9,          \
-    .rxCode        = 9,          \
+    .txCode        = 10,          \
+    .rxCode        = 10,          \
     .nsSFD         = 0,          \
     .dataRate      = DW_BR_6M8,  \
     .phrMode       = DW_PHRMODE_STD, \
