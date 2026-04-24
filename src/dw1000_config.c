@@ -35,13 +35,6 @@
 #define CFG_LDE_CFG2        0x0607          // PRF 64MHz
 #define CFG_LDE_REPC        0x3335          // preamble code 9, PRF 64MHz
 
-// SFD timeout: 0x1041 = DWT_SFDTOC_DEF (default from DecaWave)
-// 0 = disabled (no timeout, waits forever)
-// formula: preamble_length + 1 + SFD_length - PAC_size
-// for preamble 128, standard SFD (8), PAC8: 128 + 1 + 8 - 8 = 129 (0x81)
-// DWT_SFDTOC_DEF (0x1041) is much larger and more robust
-#define CFG_SFD_TO          0
-
 // CHAN_CTRL fields
 #define CFG_CHAN            5
 #define CFG_PRF_VAL         2               // DW_PRF_64M = 2, goes into RXPRF bits
@@ -87,7 +80,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     uint16_t tune1b = CFG_DRX_TUNE1b;
     uint32_t tune2  = CFG_DRX_TUNE2;
     uint16_t tune4h = CFG_DRX_TUNE4H;
-    uint16_t sfdto  = CFG_SFD_TO;
+    uint16_t sfdto = cfg->sfdTO ? cfg->sfdTO : 0x0089;
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE0B, (uint8_t *)&tune0b, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1A, (uint8_t *)&tune1a, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1B, (uint8_t *)&tune1b, 2);
