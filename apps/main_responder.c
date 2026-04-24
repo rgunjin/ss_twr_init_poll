@@ -113,6 +113,15 @@ int main(void) {
 
     dw1000_config_t cfg = DW1000_DEFAULT_CONFIG;
     dw1000_configure(&cfg);
+
+    // Debug
+    uint32_t chan_ctrl = dw1000_read32(DW_REG_CHAN_CTRL);
+    SEGGER_RTT_printf(0, "[DBG] CHAN_CTRL=0x%08X\n", chan_ctrl);
+    // TX code = биты [26:22], RX code = биты [31:27]
+    SEGGER_RTT_printf(0, "[DBG] TX_CODE=%d RX_CODE=%d\n",
+                                    (chan_ctrl >> 22) & 0x1F,
+                                    (chan_ctrl >> 27) & 0x1F);
+
     dw1000_set_antenna_delay(ANT_DLY, ANT_DLY);
 
     SEGGER_RTT_printf(0, "[INIT] OK - waiting for poll\n");
