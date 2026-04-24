@@ -124,7 +124,7 @@ int main(void) {
     // МИНИМАЛЬНЫЙ RX ТЕСТ
     // =========================================================
     dw1000_clear_sys_status(0xFFFFFFFF);        // Чистим статус
-    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+    dw1000_rx_enable();
     SEGGER_RTT_printf(0, "[RX] receiver enabled\n");
     SEGGER_RTT_printf(0, "[DBG] SYS_STATE=0x%08X\n",
                       dw1000_read32(DW_REG_SYS_STATE));

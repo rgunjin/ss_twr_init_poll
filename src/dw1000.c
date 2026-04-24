@@ -354,9 +354,10 @@ void dw1000_start_tx(uint8_t mode) {
 }
 
 void dw1000_rx_enable(void) {
-    // SYS_CTRL_RXENAB = бит 8 = 0x00000100
-    // Пишем как 32-bit - без sub-address
-    dw1000_write32(DW_REG_SYS_CTRL, SYS_CTRL_RXENAB);
+    // SYS_CTRL_RXENAB = бит 8 = байт 1 регистра SYS_CTRL
+    // Decawave пишет однобайтово в offset 1, не 32-битным словом
+    uint8_t rxen = (uint8_t)(SYS_CTRL_RXENAB >> 8);  // = 0x01
+    dw1000_write_subreg(DW_REG_SYS_CTRL, 0x01, &rxen, 1);
 }
 
 void dw1000_read_rx_data(uint8_t *buf, uint8_t len) {
