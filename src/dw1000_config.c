@@ -20,10 +20,10 @@
 
 // DRX - digital recieve tuning
 // PRF 64MHz, 6.8 Mbps, standard SFD, preamble 128, PAC8
-#define CFG_DRX_TUNE0b      0x000A          // 6.8Mbps, standard SFD
+#define CFG_DRX_TUNE0b      0x0001          // 6.8Mbps, standard SFD
 #define CFG_DRX_TUNE1a      0x008D          // PRF 64MHz
-#define CFG_DRX_TUNE1b      0x0010          // preamble 128, 6.8Mbps
-#define CFG_DRX_TUNE2       0x372A011BUL    // PRF 64MHz, PAC8
+#define CFG_DRX_TUNE1b      0x0020          // preamble 128, 6.8Mbps
+#define CFG_DRX_TUNE2       0x313B006BUL      // PRF 64MHz, PAC8
 #define CFG_DRX_TUNE4H      0x0028          // 128 symbols
 
 // AGC — automatic gain control
@@ -33,7 +33,7 @@
 // LDE — leading edge detection algorithm
 #define CFG_LDE_CFG1        0x6D            // NTM=13, PMULT=3 (same for all PRF)
 #define CFG_LDE_CFG2        0x0607          // PRF 64MHz
-#define CFG_LDE_REPC        0x3335          // preamble code 9, PRF 64MHz
+#define CFG_LDE_REPC        0x3332          // preamble code 10, PRF 64MHz
 
 // CHAN_CTRL fields
 #define CFG_CHAN            5
@@ -80,7 +80,7 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     uint16_t tune1b = CFG_DRX_TUNE1b;
     uint32_t tune2  = CFG_DRX_TUNE2;
     uint16_t tune4h = CFG_DRX_TUNE4H;
-    uint16_t sfdto = cfg->sfdTO ? cfg->sfdTO : 0x0089;
+    uint16_t sfdto = cfg->sfdTO ? cfg->sfdTO : 0x0081;
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE0B, (uint8_t *)&tune0b, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1A, (uint8_t *)&tune1a, 2);
     dw1000_write_subreg(DW_REG_DRX_CONF, DW_SUBREG_DRX_TUNE1B, (uint8_t *)&tune1b, 2);
@@ -163,11 +163,11 @@ void dw1000_configure(const dw1000_config_t *cfg) {
     dw1000_read_subreg(DW_REG_DRX_CONF, 0x08, (uint8_t*)&t2,    4);
     dw1000_read_subreg(DW_REG_DRX_CONF, 0x20, (uint8_t*)&sfdto_, 2);
     dw1000_read_subreg(DW_REG_DRX_CONF, 0x26, (uint8_t*)&t4h,   2);
-    SEGGER_RTT_printf(0, "[DRX] TUNE0B=0x%04X (exp 0x000A)\n", t0b);
+    SEGGER_RTT_printf(0, "[DRX] TUNE0B=0x%04X (exp 0x0001)\n", t0b);
     SEGGER_RTT_printf(0, "[DRX] TUNE1A=0x%04X (exp 0x008D)\n", t1a);
-    SEGGER_RTT_printf(0, "[DRX] TUNE1B=0x%04X (exp 0x0010)\n", t1b);
-    SEGGER_RTT_printf(0, "[DRX] TUNE2 =0x%08X (exp 0x372A011B)\n", t2);
-    SEGGER_RTT_printf(0, "[DRX] SFDTOC=0x%04X (exp 0x0089)\n", sfdto_);
+    SEGGER_RTT_printf(0, "[DRX] TUNE1B=0x%04X (exp 0x0020)\n", t1b);
+    SEGGER_RTT_printf(0, "[DRX] TUNE2 =0x%08X (exp 0x313B006B)\n", t2);
+    SEGGER_RTT_printf(0, "[DRX] SFDTOC=0x%04X (exp 0x0081)\n", sfdto_);
     SEGGER_RTT_printf(0, "[DRX] TUNE4H=0x%04X (exp 0x0028)\n", t4h);
 
     uint32_t chan = dw1000_read32(DW_REG_CHAN_CTRL);
