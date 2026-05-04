@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdint.h>
 #include "nrf52_addresses.h"
 #include "nrf52_peripherals.h"
@@ -143,41 +144,78 @@ int main(void) {
     led_off(30);
 
     // =========================================================
-    // МИНИМАЛЬНЫЙ TX ТЕСТ
+    // RANGING LOOP
     // =========================================================
+
+    // Настраиваем RX timeout один раз
+    uint16_t fwto = 65000;
+    dw1000_write_subreg(DW_REG_RX_FWTO, 0x00, (uint8_t*)&fwto, 2);
+    uint32_t sys_cfg = dw1000_read32(DW_REG_SYS_CFG);
+    sys_cfg |= SYS_CFG_RXWTOE;
+    dw1000_write32(DW_REG_SYS_CFG, sys_cfg);
+
     uint8_t seq = 0;
     while (1) {
+        // --- TX poll ---
         tx_poll_msg[ALL_MSG_SN_IDX] = seq++;
         dw1000_clear_sys_status(SYS_STATUS_TXFRS | SYS_STATUS_TXFRB |
-                            SYS_STATUS_TXPRS | SYS_STATUS_TXPHS);
+                                SYS_STATUS_TXPRS | SYS_STATUS_TXPHS);
         dw1000_write_tx_data(tx_poll_msg, sizeof(tx_poll_msg), 0);
         dw1000_write_tx_fctrl(sizeof(tx_poll_msg), 0, 1);
-
-        // лог после write_tx_fctrl
-        uint8_t fctrl_dbg[5];
-        dw1000_read_reg(DW_REG_TX_FCTRL, fctrl_dbg, 5);
-        SEGGER_RTT_printf(0, "[TX] fctrl=0x%02X%02X%02X%02X\n",
-        fctrl_dbg[3], fctrl_dbg[2], fctrl_dbg[1], fctrl_dbg[0]);
-
         dw1000_start_tx(DW_TX_IMMEDIATE);
 
+        // Ждём TXFRS
         uint32_t status;
         uint32_t timeout = 1000000;
         while (!((status = dw1000_read_sys_status()) & SYS_STATUS_TXFRS)) {
             if (--timeout == 0) {
-                SEGGER_RTT_printf(0, "[TX] TIMEOUT status=0x%08X\n", status);
+                SEGGER_RTT_printf(0, "[TX] TIMEOUT\n");
                 break;
             }
         }
-        SEGGER_RTT_printf(0, "[TX] seq=%d status=0x%08X\n", seq, status);
+        dw1000_clear_sys_status(SYS_STATUS_TXFRS);
 
-        // Читаем все 5 байт статуса
-        uint8_t full_status[5];
-        dw1000_read_reg(DW_REG_SYS_STATUS, full_status, 5);
-        SEGGER_RTT_printf(0, "[TX] full=0x%02X%02X%02X%02X%02X\n",
-                                full_status[4], full_status[3], full_status[2],
-                                full_status[1], full_status[0]);
+        // --- RX response ---
+        dw1000_rx_enable();
 
-        delay(500000);  // задержка внутри цикла
+        timeout = 10000000;
+        uint32_t rx_status;
+        while (!((rx_status = dw1000_read_sys_status()) &
+            (SYS_STATUS_RXFCG | SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR))) {
+                if (--timeout == 0) break;
+        }
+
+        if (rx_status & SYS_STATUS_RXFCG) {
+            dw1000_clear_sys_status(SYS_STATUS_RXFCG);
+
+            uint32_t frame_len = dw1000_read32(DW_REG_RX_FINFO) & 0x3FF;
+            if (frame_len <= RX_BUF_LEN)
+                dw1000_read_reg(DW_REG_RX_BUFFER, rx_buffer, frame_len);
+
+            rx_buffer[ALL_MSG_SN_IDX] = 0;
+            if (memcmp(rx_buffer, rx_resp_msg, ALL_MSG_COMMON_LEN) == 0) {
+
+                // T1: poll TX timestamp
+                uint32_t poll_tx_ts = dw1000_read_tx_timestamp();
+                // T4: response RX timestamp
+                uint32_t resp_rx_ts = dw1000_read_rx_timestamp();
+                // T2 и T3 из фрейма
+                uint32_t poll_rx_ts = msg_get_ts(&rx_buffer[RESP_MSG_POLL_RX_TS_IDX]);
+                uint32_t resp_tx_ts = msg_get_ts(&rx_buffer[RESP_MSG_RESP_TX_TS_IDX]);
+
+                int32_t rtd_init = (int32_t)(resp_rx_ts - poll_tx_ts);
+                int32_t rtd_resp = (int32_t)(resp_tx_ts - poll_rx_ts);
+                double tof = ((double)rtd_init - (double)rtd_resp) / 2.0 * DWT_TIME_UNITS;
+                double distance = tof * SPEED_OF_LIGHT;
+
+                SEGGER_RTT_printf(0, "[RANGE] dist=%d cm\n", (int)(distance * 100));
+            }
+        } else {
+            SEGGER_RTT_printf(0, "[RX] TimeOut\n");
+            dw1000_trxoff();
+            dw1000_rx_reset();
+            dw1000_clear_sys_status(SYS_STATUS_ALL_RX_TO | SYS_STATUS_ALL_RX_ERR);
+        }
+    delay(500000);
     }
 }

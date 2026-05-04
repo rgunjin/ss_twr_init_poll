@@ -15,7 +15,7 @@
 // =============================================================================
 
 #define ANT_DLY                         16456   // Default antenna delay for DW1001
-#define POLL_RX_TO_RESP_TX_DLY_UUS      1100    // 1100 микросекунд задержка между приёмом poll и отправкой response
+#define POLL_RX_TO_RESP_TX_DLY_UUS      5000    // 1100 микросекунд задержка между приёмом poll и отправкой response
 #define UUS_TO_DWT_TIME                 65536   // 1 uus = 512/499.2 секунды, 1 секунда = 499.2*128 dtu, итого 65536
 
 
@@ -192,15 +192,19 @@ int main(void) {
                 SEGGER_RTT_printf(0, "[TWR] T2 poll_rx_ts=0x%08X%08X\n",
                                   (uint32_t)(poll_rx_ts >> 32), (uint32_t)poll_rx_ts);
 
+                // Debug: Check sys_time
+                uint8_t sys_time_before[5];
+                dw1000_read_reg(DW_REG_SYS_TIME, sys_time_before, 5);
+                uint32_t t_before = sys_time_before[1] | (sys_time_before[2]<<8) | (sys_time_before[3]<<16) | (sys_time_before[4]<<24);
+
                 // Вычисляем момент отправки ответа: T2 + 1100 uus
                 // >> 8 потому что DX_TIME хранит время со сдвигом 8 бит
-                uint32_t resp_tx_time =
+                uint64_t resp_tx_time_64 =
                     (poll_rx_ts + ((uint64_t)POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
 
                 // T3: восстанавливаем полный timestamp из resp_tx_time + antenna delay
                 // Это значение которое initiator получит и использует для расчёта дистанции
-                uint64_t resp_tx_ts =
-                    (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + ANT_DLY;
+                uint64_t resp_tx_ts = ((resp_tx_time_64 & ~1ULL) << 8) + ANT_DLY;
                 SEGGER_RTT_printf(0, "[TWR] T3 resp_tx_ts=0x%08X%08X\n",
                                   (uint32_t)(resp_tx_ts >> 32), (uint32_t)resp_tx_ts);
 
@@ -211,10 +215,11 @@ int main(void) {
 
                 // Пишем delayed TX time в DX_TIME регистр
                 uint8_t dx[5] = {0};
-                dx[0] = (resp_tx_time)       & 0xFF;
-                dx[1] = (resp_tx_time >>  8) & 0xFF;
-                dx[2] = (resp_tx_time >> 16) & 0xFF;
-                dx[3] = (resp_tx_time >> 24) & 0xFF;
+                dx[0] = (resp_tx_time_64)       & 0xFF;
+                dx[1] = (resp_tx_time_64 >>  8) & 0xFF;
+                dx[2] = (resp_tx_time_64 >> 16) & 0xFF;
+                dx[3] = (resp_tx_time_64 >> 24) & 0xFF;
+                dx[4] = (resp_tx_time_64 >> 32) & 0xFF;
                 dw1000_write_reg(DW_REG_DX_TIME, dx, 5);
 
                 // Пишем тело фрейма в TX буфер
@@ -227,8 +232,24 @@ int main(void) {
                 fctrl |= (1 << 15);              // TR bit = это ranging фрейм
                 dw1000_write32(DW_REG_TX_FCTRL, fctrl);
 
+                uint8_t sys_time_after[5];
+                dw1000_read_reg(DW_REG_SYS_TIME, sys_time_after, 5);
+                uint32_t t_after = sys_time_after[1] | (sys_time_after[2]<<8) | (sys_time_after[3]<<16) | (sys_time_after[4]<<24);
+
+                uint32_t elapsed_dtu = t_after - t_before;
+                uint32_t elapsed_uus = elapsed_dtu / 65536;
+                SEGGER_RTT_printf(0, "[TIME] prep took ~%d uus\n", elapsed_uus);
+
+                uint8_t cur_time[5];
+                dw1000_read_reg(DW_REG_SYS_TIME, cur_time, 5);
+                uint64_t now = 0;
+                for (int i = 4; i >= 0; i--) { now <<= 8; now |= cur_time[i]; }
+                SEGGER_RTT_printf(0, "[TIME] now_dtu=0x%08X%08X scheduled_dtu=0x%08X%08X\n",
+                                    (uint32_t)(now >> 32), (uint32_t)now,
+                                    (uint32_t)(resp_tx_time_64 >> 24), (uint32_t)(resp_tx_time_64 << 8));
+
                 // Запускаем delayed TX
-                uint8_t ctrl = SYS_CTRL_TXSTRT | SYS_CTRL_TXDLYS;
+                uint8_t ctrl = SYS_CTRL_TXSTRT;
                 dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
 
                 // Ждём подтверждения отправки TXFRS
