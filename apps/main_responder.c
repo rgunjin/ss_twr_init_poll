@@ -14,7 +14,10 @@
 // Constants
 // =============================================================================
 
-#define ANT_DLY             16456               // Default antenna delay for DW1001
+#define ANT_DLY                         16456   // Default antenna delay for DW1001
+#define POLL_RX_TO_RESP_TX_DLY_UUS      1100    // 1100 микросекунд задержка между приёмом poll и отправкой response
+#define UUS_TO_DWT_TIME                 65536   // 1 uus = 512/499.2 секунды, 1 секунда = 499.2*128 dtu, итого 65536
+
 
 // Message field indexes
 #define ALL_MSG_SN_IDX              2           // sequence number byte
@@ -160,39 +163,112 @@ int main(void) {
         loop_counter++;
         
         uint32_t status = dw1000_read_sys_status();
-
         if (status & SYS_STATUS_RXFCG) {
-            SEGGER_RTT_printf(0, "[RX] got frame! loops=%d errors=%d\n",
-                            loop_counter, err_counter);
             dw1000_clear_sys_status(SYS_STATUS_RXFCG);
-            dw1000_rx_reset();
-            dw1000_rx_enable();
+
+            // Читаем длину и данные фрейма
+            uint32_t frame_len = dw1000_read32(DW_REG_RX_FINFO) & 0x3FF;
+            if (frame_len <= RX_BUF_LEN)
+                dw1000_read_reg(DW_REG_RX_BUFFER, rx_buffer, frame_len);
+
+            // Валидация: сбрасываем seq number и сравниваем с эталоном
+            rx_buffer[ALL_MSG_SN_IDX] = 0;
+            if (memcmp(rx_buffer, rx_poll_msg, ALL_MSG_COMMON_LEN) != 0) {
+                SEGGER_RTT_printf(0, "[RX] unknown frame, ignoring\n");
+                dw1000_rx_reset();
+                dw1000_rx_enable();
+                // цикл дальше
+            } else {
+                SEGGER_RTT_printf(0, "[RX] poll received, sending response\n");
+
+                // T2: читаем RX timestamp (40 бит) — момент когда пришёл poll
+                uint8_t ts_buf[5];
+                dw1000_read_reg(DW_REG_RX_TIME, ts_buf, 5);
+                uint64_t poll_rx_ts = 0;
+                for (int i = 4; i >= 0; i--) {
+                    poll_rx_ts <<= 8;
+                    poll_rx_ts |= ts_buf[i];
+                }
+                SEGGER_RTT_printf(0, "[TWR] T2 poll_rx_ts=0x%08X%08X\n",
+                                  (uint32_t)(poll_rx_ts >> 32), (uint32_t)poll_rx_ts);
+
+                // Вычисляем момент отправки ответа: T2 + 1100 uus
+                // >> 8 потому что DX_TIME хранит время со сдвигом 8 бит
+                uint32_t resp_tx_time =
+                    (poll_rx_ts + ((uint64_t)POLL_RX_TO_RESP_TX_DLY_UUS * UUS_TO_DWT_TIME)) >> 8;
+
+                // T3: восстанавливаем полный timestamp из resp_tx_time + antenna delay
+                // Это значение которое initiator получит и использует для расчёта дистанции
+                uint64_t resp_tx_ts =
+                    (((uint64_t)(resp_tx_time & 0xFFFFFFFEUL)) << 8) + ANT_DLY;
+                SEGGER_RTT_printf(0, "[TWR] T3 resp_tx_ts=0x%08X%08X\n",
+                                  (uint32_t)(resp_tx_ts >> 32), (uint32_t)resp_tx_ts);
+
+                // Заполняем ответный фрейм
+                tx_resp_msg[ALL_MSG_SN_IDX] = frame_seq_nb++;
+                msg_set_ts(&tx_resp_msg[RESP_MSG_POLL_RX_TS_IDX], (uint32_t)poll_rx_ts);
+                msg_set_ts(&tx_resp_msg[RESP_MSG_RESP_TX_TS_IDX], (uint32_t)resp_tx_ts);
+
+                // Пишем delayed TX time в DX_TIME регистр
+                uint8_t dx[5] = {0};
+                dx[0] = (resp_tx_time)       & 0xFF;
+                dx[1] = (resp_tx_time >>  8) & 0xFF;
+                dx[2] = (resp_tx_time >> 16) & 0xFF;
+                dx[3] = (resp_tx_time >> 24) & 0xFF;
+                dw1000_write_reg(DW_REG_DX_TIME, dx, 5);
+
+                // Пишем тело фрейма в TX буфер
+                dw1000_write_reg(DW_REG_TX_BUFFER, tx_resp_msg, sizeof(tx_resp_msg));
+
+                // TX_FCTRL: длина фрейма + ranging bit (TR)
+                uint32_t fctrl = dw1000_read32(DW_REG_TX_FCTRL);
+                fctrl &= ~0x3FF;                  // сбрасываем длину
+                fctrl |= sizeof(tx_resp_msg);     // новая длина
+                fctrl |= (1 << 15);              // TR bit = это ranging фрейм
+                dw1000_write32(DW_REG_TX_FCTRL, fctrl);
+
+                // Запускаем delayed TX
+                uint8_t ctrl = SYS_CTRL_TXSTRT | SYS_CTRL_TXDLYS;
+                dw1000_write_subreg(DW_REG_SYS_CTRL, 0x00, &ctrl, 1);
+
+                // Ждём подтверждения отправки TXFRS
+                int timeout = 100000;
+                while (!(dw1000_read_sys_status() & SYS_STATUS_TXFRS) && --timeout) {}
+
+                if (timeout == 0) {
+                    SEGGER_RTT_printf(0, "[TX] delayed TX failed! status=0x%08X\n",
+                    dw1000_read_sys_status());
+                    dw1000_trxoff();
+                } else {
+                    SEGGER_RTT_printf(0, "[TX] response sent seq=%d\n", frame_seq_nb - 1);
+                }
+
+                dw1000_clear_sys_status(SYS_STATUS_TXFRS);
+                dw1000_rx_reset();
+                dw1000_rx_enable();
+            }
 
         } else if (status & SYS_STATUS_ALL_RX_TO) {
             err_counter++;
-            if (err_counter % 10 == 0) {
-                SEGGER_RTT_printf(0, "[RX] %d errors, %d loops\n", 
-                              err_counter, loop_counter);
-            }
-            SEGGER_RTT_printf(0, "[RX] timeout status=0x%08X\n", status);
+            if (err_counter % 10 == 0)
+                SEGGER_RTT_printf(0, "[RX] %d errors, %d loops\n", err_counter, loop_counter);
             dw1000_trxoff();
             dw1000_rx_reset();
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_TO);
             dw1000_rx_enable();
-            
+
         } else if (status & SYS_STATUS_ALL_RX_ERR) {
             SEGGER_RTT_printf(0, "[RX] error status=0x%08X\n", status);
             if (status & SYS_STATUS_RXPHE)   SEGGER_RTT_printf(0, "  -> RXPHE\n");
             if (status & SYS_STATUS_RXFCE)   SEGGER_RTT_printf(0, "  -> RXFCE\n");
             if (status & SYS_STATUS_RXRFSL)  SEGGER_RTT_printf(0, "  -> RXRFSL\n");
-            if (status & SYS_STATUS_RXRFTO)  SEGGER_RTT_printf(0, "  -> RXRFTO\n");
-            if (status & SYS_STATUS_LDEERR)  SEGGER_RTT_printf(0, "  -> LDEERR\n");
             if (status & SYS_STATUS_RXSFDTO) SEGGER_RTT_printf(0, "  -> RXSFDTO\n");
+            if (status & SYS_STATUS_LDEERR)  SEGGER_RTT_printf(0, "  -> LDEERR\n");
             dw1000_trxoff();
             dw1000_rx_reset();
             dw1000_clear_sys_status(SYS_STATUS_ALL_RX_ERR);
             dw1000_rx_enable();
-        } 
+        }
     }
 }
 
